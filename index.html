@@ -1634,7 +1634,10 @@ footer{background:transparent!important;padding:0!important;margin:28px auto 0!i
   /* ── 터치 타깃 하한 ── */
   button,.chip,a.btn{ min-height:36px }
   .mhelp{ width:26px!important; height:26px!important; min-height:26px }
-  .starbtn{ min-width:40px; min-height:40px }
+  .starbtn{ min-width:40px; min-height:40px; display:inline-flex; align-items:center; justify-content:center }
+  /* 별표 터치영역(40px)과 안 겹치게 비교 칩을 왼쪽으로, 세로 중심 맞춤 */
+  .card .starbtn{ right:2px; top:4px }
+  .card .cmpc{ right:44px; top:13px }
 
   /* ── 작은 글씨 하한 (가독성): 본문성 텍스트는 11px 이상 ── */
   .qmt,.qsrc2,.qxs,.pof,.vnote,.tip,.meta,.sub{ font-size:0.71875rem!important }
