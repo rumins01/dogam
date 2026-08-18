@@ -1763,6 +1763,36 @@ footer{background:transparent!important;padding:0!important;margin:28px auto 0!i
   font-weight:600;box-shadow:var(--sh);opacity:0;pointer-events:none;transition:opacity .18s,transform .18s;
   max-width:88vw;text-align:center}
 #dtoast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+/* 나란히 보기 컬럼 */
+#cmpModal .cmpin{max-width:min(96vw,1280px)}
+.cmptabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 14px}
+.cmptabs button{border:1px solid var(--line);background:var(--panel);color:var(--ink2);
+  border-radius:999px;padding:6px 13px;font-size:.75rem;font-weight:700;cursor:pointer}
+.cmptabs button[aria-pressed=true]{background:var(--accent);color:#fff;border-color:var(--accent)}
+.cmpcols{display:flex;gap:14px;align-items:flex-start;overflow-x:auto;padding-bottom:6px}
+.cmpcol{flex:1 1 0;min-width:320px;max-width:460px;background:var(--panel);border:1px solid var(--line);
+  border-radius:12px;padding:14px;border-top:3px solid var(--pc)}
+.cmphd{display:flex;gap:10px;align-items:center;margin-bottom:10px}
+.cmphd .ph{width:44px;height:56px;flex:none}
+.cmpnm{background:none;border:0;padding:0;font-size:.9375rem;font-weight:800;color:var(--ink);
+  cursor:pointer;text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--line)}
+.cmpnm:hover{text-decoration-color:var(--accent);color:var(--accent)}
+.cmpsub{font-size:.71875rem;color:var(--ink3)}
+.cmprm{margin-left:auto;border:0;background:none;color:var(--ink3);font-size:1.05rem;cursor:pointer;padding:2px 6px}
+.cmprm:hover{color:var(--neg)}
+.cmpbody .chartgrid{grid-template-columns:1fr}
+.cmpcol .kpis{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cmpcol .kpi b{font-size:1.05rem;white-space:nowrap}
+.cmpcol .kpi{min-width:0}
+.cmpk{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.cmq{border-bottom:1px solid var(--line);padding:9px 2px}
+.cmq p{margin:0 0 5px;font-size:.78125rem;line-height:1.6}
+.cmq span{font-size:.65625rem;color:var(--ink3)}
+.cmn{display:block;padding:8px 2px;border-bottom:1px solid var(--line);text-decoration:none}
+.cmn .t2{display:block;font-size:.78125rem;color:var(--ink);line-height:1.5}
+.cmn .s2{display:block;font-size:.65625rem;color:var(--ink3);margin-top:2px}
+#cmpModal thead .cmpnm{font-size:.8125rem}
+@media(max-width:720px){ .cmpcol{min-width:280px} }
 #cmpbar{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:60;display:none;
   align-items:center;gap:9px;background:var(--panel);border:1.5px solid var(--accent);border-radius:12px;
   box-shadow:0 6px 24px color-mix(in srgb,var(--accent) 25%,transparent);padding:10px 14px;font-size:.78125rem;max-width:94vw;flex-wrap:wrap}

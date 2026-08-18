@@ -3644,8 +3644,51 @@ function cmpBar(){
   document.getElementById('cmpGo').onclick=cmpShow;
   document.getElementById('cmpClr').onclick=()=>{ CMP=[]; cmpSave(); cmpBar(); cmpPaintBtns(); };
 }
+var cmpTab='sum';
+function cmpMemberCol(m3, tab){
+  const A2=(D.assets||{})[m3.cd];
+  const kpis=`
+    <div class="kpis cmpk">
+      <div class="kpi"><b>${m3.vote&&m3.vote.tot? (m3.vote.part??'–')+'%':'–'}</b><i>표결 참여율</i><small>${m3.vote&&m3.vote.tot? nf(m3.vote.tot-m3.vote.absent)+' / '+nf(m3.vote.tot)+'건':'집계 전'}</small></div>
+      <div class="kpi"><b>${nf(m3.prop?.n??0)}</b><i>대표발의</i><small>성사 ${nf(m3.prop?.pass??0)}건 · ${m3.prop?.rate??0}%</small></div>
+      <div class="kpi"><b>${m3.cdefect?.rate??0}%</b><i>당론 이탈률</i><small>쟁점 ${nf(m3.cdefect?.d??0)} / ${nf(m3.cdefect?.n??0)}건</small></div>
+      <div class="kpi"><b>${nf(m3.speech?.n??0)}</b><i>발언 구간</i><small>회의록 전체 집계</small></div>
+    </div>`;
+  let body='';
+  try{
+    if(tab==='p') body = kpis + profileCharts(m3);
+    else if(tab==='b') body = billCharts(m3) + voteCharts(m3).replace(/id="vfSum"/g,'data-vfsum="1"').replace(/data-vf="/g,'data-vfx="');
+    else if(tab==='w') body = renderAssets(m3)
+      .replace(/ id="afilter"/g,'').replace(/ id="alist"/g,'').replace(/data-af="/g,'data-afx="')
+      .replace(/항목을 누르면 그 종류만 아래에서 봐요/g,'구성 비율이에요 · 상세는 의원 이름을 눌러 확인하세요');
+    else if(tab==='s'){
+      const qs2=(D.quotes||[]).filter(z=>z.c===m3.cd).slice(0,6);
+      body = qs2.length? qs2.map(z=>`
+        <div class="cmq"><p>“${esc(z.s)}”</p>
+          <span>${z.src==='언론'? esc(z.ms||'언론'): esc(z.m)+'위 국정감사'} · ${esc(z.d)}</span></div>`).join('')
+        : '<div class="empty">수록된 발언이 없어요</div>';
+    }
+    else if(tab==='n'){
+      const ns=((D.news5||{})[m3.cd]||[]).slice(0,8);
+      body = ns.length? ns.map(a2=>`
+        <a class="cmn" href="${esc(a2[3]||'#')}" target="_blank" rel="noopener">
+          <span class="t2">${esc(a2[1]||'')}</span><span class="s2">${esc(a2[2]||'')} · ${esc(a2[0]||'')}</span></a>`).join('')
+        : '<div class="empty">수집된 보도가 없어요</div>';
+    }
+  }catch(e){ body='<div class="empty">이 항목을 그리는 중 문제가 생겼어요</div>'; }
+  return `<div class="cmpcol" style="--pc:${pc(m3.party)}">
+    <div class="cmphd">
+      ${avatar(m3,'ph')}
+      <div><button class="cmpnm" data-cmopen="${m3.cd}" title="의원 상세 열기">${esc(m3.name)}</button>
+        <div class="cmpsub">${esc(m3.party)} · ${esc(m3.dist||'비례대표')}</div></div>
+      <button class="cmprm" data-cmrm="${m3.cd}" title="비교에서 빼기" aria-label="${esc(m3.name)} 비교에서 빼기">&times;</button>
+    </div>
+    <div class="cmpbody">${body}</div>
+  </div>`;
+}
 function cmpShow(){
   try{
+  try{ if(sheet.classList.contains('on')) close(); }catch(e){}
   const ms=CMP.map(cd=>D.members.find(x=>x.cd===cd)).filter(Boolean);
   if(!ms.length){ dToast('비교할 의원이 없어요. 카드의 [비교] 버튼으로 담아 주세요.'); return; }
   const A=cd=>(D.assets||{})[cd];
@@ -3666,15 +3709,27 @@ function cmpShow(){
       const d2=a.t-a.p; return (d2>=0?'+':'')+AMAN(d2); })],
     ['5년 보도', ...ms.map(m=>nf(((D.news5||{})[m.cd]||[]).length)+'건')],
   ];
+  const TABS=[['sum','요약 비교'],['p','프로필'],['b','의정활동'],['w','재산'],['s','발언'],['n','뉴스']];
   const b=document.getElementById('cmpBody');
-  b.innerHTML='<h3>의원 비교</h3>'
-    +'<div class="cs2">지표마다 분모가 달라요 — 표결·당론이탈은 재직기간·쟁점표결 수에 따라, 재산은 신고 시점 기준이에요. 괄호가 분모예요.</div>'
-    +'<table><thead><tr><th></th>'+ms.map(m=>'<th>'+esc(m.name)+'</th>').join('')+'</tr></thead><tbody>'
-    +rows.map(r=>'<tr>'+r.map((c,i)=>'<td'+(i===0?'':'')+'>'+esc(String(c))+'</td>').join('')+'</tr>').join('')
-    +'</tbody></table>';
-  const cb=document.getElementById('cmpCsv'); cb.hidden=false;
+  b.innerHTML='<h3>의원 나란히 보기</h3>'
+    +'<div class="cs2">'+(cmpTab==='sum'
+      ? '지표마다 분모가 달라요 — 괄호가 분모예요. 이름을 누르면 그 의원 상세로 가요.'
+      : '같은 항목을 나란히 봐요 · 이름을 누르면 그 의원 상세로 가요')+'</div>'
+    +'<div class="cmptabs">'+TABS.map(t=>'<button data-cmt="'+t[0]+'" aria-pressed="'+(cmpTab===t[0])+'">'+t[1]+'</button>').join('')+'</div>'
+    +(cmpTab==='sum'
+      ? '<table><thead><tr><th></th>'+ms.map(m=>'<th><button class="cmpnm" data-cmopen="'+m.cd+'">'+esc(m.name)+'</button></th>').join('')+'</tr></thead><tbody>'
+        +rows.map(r=>'<tr>'+r.map(c=>'<td>'+ (String(c).startsWith('<')?c:esc(String(c))) +'</td>').join('')+'</tr>').join('')
+        +'</tbody></table>'
+      : '<div class="cmpcols">'+ms.map(m=>cmpMemberCol(m, cmpTab)).join('')+'</div>');
+  const cb=document.getElementById('cmpCsv');
+  cb.hidden = cmpTab!=='sum';
   cb.onclick=()=>dlCSV('의원비교_'+ms.map(m=>m.name).join('_')+'.csv',
     [['지표', ...ms.map(m=>m.name)], ...rows]);
+  b.querySelectorAll('[data-cmt]').forEach(t=>t.onclick=()=>{ cmpTab=t.dataset.cmt; cmpShow(); });
+  b.querySelectorAll('[data-cmopen]').forEach(n=>n.onclick=()=>{ cmpClose();
+    const m4=D.members.find(x=>x.cd===n.dataset.cmopen); if(m4) open(m4); });
+  b.querySelectorAll('[data-cmrm]').forEach(n=>n.onclick=()=>{ cmpToggle(n.dataset.cmrm);
+    if(CMP.length) cmpShow(); else cmpClose(); });
   document.getElementById('cmpModal').classList.add('on');
   }catch(e){ dToast('비교 화면을 여는 중 문제가 생겼어요. 새로고침 후 다시 시도해 주세요.'); }
 }
