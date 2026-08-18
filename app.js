@@ -3738,35 +3738,43 @@ document.addEventListener('click',e=>{
   if(cb){ e.stopPropagation(); cmpToggle(cb.dataset.cd); }
 });
 cmpBar();
-/* 모바일 비교창 — 아래로 끌어내려 닫기 */
+/* 모바일 비교창 — 스크롤은 그대로, 경계에서만 닫힌다.
+   스크롤 컨테이너는 .cmpin이 아니라 #cmpModal(overflow:auto)이다.
+   ① 맨 위에서 아래로 끌어내리면 닫힘 (표준 바텀시트 패턴)
+   ② 맨 아래까지 스크롤한 뒤 계속 내리면(overscroll) 닫힘 */
 (function(){
-  const ci=document.querySelector('#cmpModal .cmpin'); if(!ci) return;
-  let sy=0, dy=0, on=false;
+  const md=document.getElementById('cmpModal'), ci=md&&md.querySelector('.cmpin'); if(!ci) return;
+  let sy=0, dy=0, on=false, startTop=false, startBot=false;
   const TH=90;
+  const atTop=()=>md.scrollTop<=0;
+  const atBot=()=>md.scrollHeight>md.clientHeight+4 && md.scrollTop+md.clientHeight>=md.scrollHeight-2;
   const reset=snap=>{
     ci.style.transition = snap ? 'transform .22s cubic-bezier(.2,0,0,1)' : '';
     ci.style.transform='';
     if(snap) setTimeout(()=>{ ci.style.transition=''; },240);
   };
-  ci.addEventListener('touchstart',e=>{
-    if(innerWidth>640 || e.touches.length!==1 || ci.scrollTop>0){ on=false; return; }
-    on=true; sy=e.touches[0].clientY; dy=0; ci.style.transition='none';
+  md.addEventListener('touchstart',e=>{
+    if(innerWidth>640 || e.touches.length!==1){ on=false; return; }
+    on=true; sy=e.touches[0].clientY; dy=0;
+    startTop=atTop(); startBot=atBot();
+    ci.style.transition='none';
   },{passive:true});
-  ci.addEventListener('touchmove',e=>{
+  md.addEventListener('touchmove',e=>{
     if(!on) return;
     dy=e.touches[0].clientY-sy;
-    if(dy<=0){ ci.style.transform=''; return; }
-    if(ci.scrollTop>0){ on=false; reset(); return; }
-    ci.style.transform='translateY('+dy+'px)';
+    // 맨 위에서 시작해 아래로 끄는 중일 때만 시트를 따라 내린다
+    if(startTop && dy>0 && atTop()){ ci.style.transform='translateY('+dy+'px)'; }
+    else ci.style.transform='';
   },{passive:true});
   const end=()=>{
     if(!on) return; on=false;
-    if(dy>TH){ reset(false); cmpClose(); }
+    if(startTop && dy>TH && atTop()){ reset(false); cmpClose(); }
+    else if(startBot && dy<-TH && atBot()){ reset(false); cmpClose(); }  // 바닥에서 더 내림
     else reset(true);
     dy=0;
   };
-  ci.addEventListener('touchend',end,{passive:true});
-  ci.addEventListener('touchcancel',end,{passive:true});
+  md.addEventListener('touchend',end,{passive:true});
+  md.addEventListener('touchcancel',end,{passive:true});
 })();
 /* 시트가 열릴 때 비교 버튼 상태 갱신 */
 (function(){ const _o2=open; open=function(m){ _o2(m); setTimeout(cmpPaintBtns,50); }; })();
