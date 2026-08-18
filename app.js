@@ -1516,6 +1516,8 @@ function card(x){ return `
       aria-label="${esc(x.name)} · ${esc(x.party)} · ${esc(x.dist||'비례대표')} — 상세 보기">
       <span class="starbtn ${isStar(x.cd)?'on':''}" data-cd="${x.cd}" role="button" tabindex="0"
         aria-label="${esc(x.name)} 관심 의원 ${isStar(x.cd)?'해제':'추가'}"><svg class="ic" aria-hidden="true"><use href="#i-star"/></svg></span>
+      <span class="cmpc ${(typeof CMP!=='undefined'&&CMP&&CMP.includes(x.cd))?'on':''}" data-cmp="${x.cd}" role="button" tabindex="0"
+        aria-label="${esc(x.name)} 비교 목록에 담기">${(typeof CMP!=='undefined'&&CMP&&CMP.includes(x.cd))?'비교 담김':'비교'}</span>
       <div class="hd">
         ${avatar(x,'ph')}
         <div>
@@ -1623,16 +1625,21 @@ const sheet = document.getElementById('sheet'), scrim = document.getElementById(
 document.getElementById('grid').addEventListener('click',e=>{
   const st = e.target.closest('.starbtn');
   if(st){ e.stopPropagation(); toggleStar(st.dataset.cd); return; }
+  const cc = e.target.closest('[data-cmp]');
+  if(cc){ e.stopPropagation(); try{ cmpToggle(cc.dataset.cmp); }catch(e2){} return; }
   const c = e.target.closest('.card'); if(!c) return;
   open(D.members.find(x=>x.cd===c.dataset.cd));
 });
-/* 별표를 키보드로도 누를 수 있게 */
+/* 별표·비교를 키보드로도 누를 수 있게 */
 document.getElementById('grid').addEventListener('keydown',e=>{
   const st=e.target.closest && e.target.closest('.starbtn');
   if(st && (e.key==='Enter'||e.key===' ')){
     e.preventDefault(); e.stopPropagation(); toggleStar(st.dataset.cd);
     st.setAttribute('aria-label', st.getAttribute('aria-label').replace(/추가$|해제$/, isStar(st.dataset.cd)?'해제':'추가'));
   }
+  const cc=e.target.closest && e.target.closest('[data-cmp]');
+  if(cc && (e.key==='Enter'||e.key===' ')){
+    e.preventDefault(); e.stopPropagation(); try{ cmpToggle(cc.dataset.cmp); }catch(e2){} }
 });
 scrim.addEventListener('click', close);
 document.addEventListener('keydown',e=>{ if(e.key==='Escape') close(); });
@@ -3599,15 +3606,30 @@ function showDict(){
 /* ── 의원 비교 (최대 3명) ── */
 var CMP=(()=>{ try{ return JSON.parse(localStorage.getItem('dogam.cmp.v1'))||[]; }catch(e){ return []; } })();
 function cmpSave(){ try{ localStorage.setItem('dogam.cmp.v1', JSON.stringify(CMP)); }catch(e){} }
+function dToast(msg){
+  let t=document.getElementById('dtoast');
+  if(!t){ t=document.createElement('div'); t.id='dtoast'; t.setAttribute('role','status'); document.body.appendChild(t); }
+  t.textContent=msg; t.classList.add('on');
+  clearTimeout(t.__h); t.__h=setTimeout(()=>t.classList.remove('on'), 2600);
+}
 function cmpToggle(cd){
   const i=CMP.indexOf(cd);
-  if(i>=0) CMP.splice(i,1);
-  else{ if(CMP.length>=3){ alert('비교는 최대 3명까지예요. 먼저 한 명을 빼 주세요.'); return; } CMP.push(cd); }
+  if(i>=0){ CMP.splice(i,1); }
+  else{
+    if(CMP.length>=3){ dToast('비교는 최대 3명까지예요. 아래 바에서 비우고 다시 담아 주세요.'); return; }
+    CMP.push(cd);
+    const m=D.members.find(x=>x.cd===cd);
+    if(m) dToast(m.name+' 의원을 비교에 담았어요 ('+CMP.length+'/3)');
+  }
   cmpSave(); cmpBar(); cmpPaintBtns();
 }
 function cmpPaintBtns(){
   document.querySelectorAll('.cmpadd').forEach(b=>{
     const on=CMP.includes(b.dataset.cd);
+    b.classList.toggle('on', on); b.textContent=on?'✓ 비교 담김':'+ 비교';
+  });
+  document.querySelectorAll('[data-cmp]').forEach(b=>{
+    const on=CMP.includes(b.dataset.cmp);
     b.classList.toggle('on', on); b.textContent=on?'비교 담김':'비교';
   });
 }
@@ -3623,15 +3645,16 @@ function cmpBar(){
   document.getElementById('cmpClr').onclick=()=>{ CMP=[]; cmpSave(); cmpBar(); cmpPaintBtns(); };
 }
 function cmpShow(){
+  try{
   const ms=CMP.map(cd=>D.members.find(x=>x.cd===cd)).filter(Boolean);
-  if(!ms.length) return;
+  if(!ms.length){ dToast('비교할 의원이 없어요. 카드의 [비교] 버튼으로 담아 주세요.'); return; }
   const A=cd=>(D.assets||{})[cd];
   const fmt=(v,u)=>v==null?'–':(nf(v)+(u||''));
   const rows=[
     ['정당', ...ms.map(m=>m.party)],
     ['지역구', ...ms.map(m=>m.dist||'비례대표')],
     ['선수', ...ms.map(m=>m.reele||'–')],
-    ['표결 참여율', ...ms.map(m=>(m.vote?.part??'–')+'% ('+nf(m.vote.tot-m.vote.absent)+'/'+nf(m.vote.tot)+')')],
+    ['표결 참여율', ...ms.map(m=>m.vote&&m.vote.tot? (m.vote.part??'–')+'% ('+nf(m.vote.tot-m.vote.absent)+'/'+nf(m.vote.tot)+')' : '집계 전')],
     ['쟁점 표결 찬/반/기권/불참', ...ms.map(m=>m.cvote? [m.cvote.y,m.cvote.n,m.cvote.a,m.cvote.x].map(nf).join(' / '):'–')],
     ['대표발의', ...ms.map(m=>fmt(m.prop?.n,'건'))],
     ['발의 성사율', ...ms.map(m=>(m.prop?.rate??'–')+'%')],
@@ -3653,6 +3676,7 @@ function cmpShow(){
   cb.onclick=()=>dlCSV('의원비교_'+ms.map(m=>m.name).join('_')+'.csv',
     [['지표', ...ms.map(m=>m.name)], ...rows]);
   document.getElementById('cmpModal').classList.add('on');
+  }catch(e){ dToast('비교 화면을 여는 중 문제가 생겼어요. 새로고침 후 다시 시도해 주세요.'); }
 }
 document.addEventListener('click',e=>{
   const cb=e.target.closest && e.target.closest('.cmpadd');
@@ -3677,7 +3701,7 @@ cmpBar();
       if(on) localStorage.removeItem('dogam.noTrack');
       else localStorage.setItem('dogam.noTrack','1');
       paint();
-      alert('설정했어요. 새로고침 후 적용돼요.'); };
+      dToast('설정했어요. 새로고침 후 적용돼요.'); };
     paint();
   }
 })();
