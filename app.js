@@ -3095,15 +3095,19 @@ document.addEventListener('click',e=>{
   const af=e.target.closest('#afilter button');
   if(af && CURM){ A_F=af.dataset.af||null;
     const a=assetOf(CURM.cd);
-    if(a){ document.getElementById('alist').innerHTML=assetRows(a, D.acats||[], D.arels||[]);
+    if(a){ const al=document.getElementById('alist');
+      const det=al && al.closest('details'); if(det && !det.open) det.open=true;
+      al.innerHTML=assetRows(a, D.acats||[], D.arels||[]);
       [...document.querySelectorAll('#afilter button')].forEach(b=>b.setAttribute('aria-pressed', String((b.dataset.af||'')===(A_F||''))));
     } return; }
   const ac=e.target.closest('[data-af]:not(button)');
   if(ac && CURM){ A_F=ac.dataset.af||null;
     const a=assetOf(CURM.cd);
-    if(a){ document.getElementById('alist').innerHTML=assetRows(a, D.acats||[], D.arels||[]);
+    if(a){ const al=document.getElementById('alist');
+      const det=al && al.closest('details'); if(det && !det.open) det.open=true;
+      al.innerHTML=assetRows(a, D.acats||[], D.arels||[]);
       [...document.querySelectorAll('#afilter button')].forEach(b=>b.setAttribute('aria-pressed', String((b.dataset.af||'')===(A_F||''))));
-      document.getElementById('alist').scrollIntoView({behavior:'smooth', block:'center'}); }
+      setTimeout(()=>{ al.scrollIntoView({behavior:'smooth', block:'center'}); }, 60); }
     return; }
   const fb=e.target.closest('#actf button');
   if(fb && CURM){ const v=fb.dataset.f||null; ACT_F=(v===ACT_F)?null:v; renderActs(CURM); return; }
