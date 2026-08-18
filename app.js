@@ -3738,6 +3738,36 @@ document.addEventListener('click',e=>{
   if(cb){ e.stopPropagation(); cmpToggle(cb.dataset.cd); }
 });
 cmpBar();
+/* 모바일 비교창 — 아래로 끌어내려 닫기 */
+(function(){
+  const ci=document.querySelector('#cmpModal .cmpin'); if(!ci) return;
+  let sy=0, dy=0, on=false;
+  const TH=90;
+  const reset=snap=>{
+    ci.style.transition = snap ? 'transform .22s cubic-bezier(.2,0,0,1)' : '';
+    ci.style.transform='';
+    if(snap) setTimeout(()=>{ ci.style.transition=''; },240);
+  };
+  ci.addEventListener('touchstart',e=>{
+    if(innerWidth>640 || e.touches.length!==1 || ci.scrollTop>0){ on=false; return; }
+    on=true; sy=e.touches[0].clientY; dy=0; ci.style.transition='none';
+  },{passive:true});
+  ci.addEventListener('touchmove',e=>{
+    if(!on) return;
+    dy=e.touches[0].clientY-sy;
+    if(dy<=0){ ci.style.transform=''; return; }
+    if(ci.scrollTop>0){ on=false; reset(); return; }
+    ci.style.transform='translateY('+dy+'px)';
+  },{passive:true});
+  const end=()=>{
+    if(!on) return; on=false;
+    if(dy>TH){ reset(false); cmpClose(); }
+    else reset(true);
+    dy=0;
+  };
+  ci.addEventListener('touchend',end,{passive:true});
+  ci.addEventListener('touchcancel',end,{passive:true});
+})();
 /* 시트가 열릴 때 비교 버튼 상태 갱신 */
 (function(){ const _o2=open; open=function(m){ _o2(m); setTimeout(cmpPaintBtns,50); }; })();
 
