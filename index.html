@@ -1763,6 +1763,12 @@ footer{background:transparent!important;padding:0!important;margin:28px auto 0!i
   font-weight:600;box-shadow:var(--sh);opacity:0;pointer-events:none;transition:opacity .18s,transform .18s;
   max-width:88vw;text-align:center}
 #dtoast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+/* 발언 정렬 */
+.sortbar{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.sortbar select{padding:6px 11px;border-radius:8px;border:1px solid var(--line);
+  background:var(--panel);color:var(--ink);font-size:.75rem;font-weight:700;cursor:pointer}
+.sortbar .sorthint{font-size:.6875rem;color:var(--ink3)}
+@media(max-width:520px){ .sortbar .sorthint{width:100%} }
 /* 나란히 보기 컬럼 */
 #cmpModal .cmpin{max-width:min(96vw,1280px)}
 .cmptabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 14px}

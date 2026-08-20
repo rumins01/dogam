@@ -2702,6 +2702,15 @@ const TAG_GROUPS = D.tagGroups || {};
 let qtGrp=null, qtKw=null, qtQ2='';
 /* ── 발언 뷰 (국정감사 회의록 + 언론 인용) ── */
 var qtSrc = null;                  // null=전체 / '감사' / '언론'
+var qtSort = 'new';                // 발언 정렬: new|old|member|cmt|long|news
+const QT_SORTS = [
+  ['new','최신순','최신 발언부터'],
+  ['old','오래된순','가장 오래된 발언부터'],
+  ['member','의원 가나다순','의원 이름 가나다 · 같은 의원은 최신순'],
+  ['cmt','위원회·매체순','위원회(국정감사)와 매체(언론) 가나다 · 같은 곳은 최신순'],
+  ['long','발언 긴 순','문장이 긴 발언부터 · 맥락이 많이 담긴 순서'],
+  ['news','관련 보도 많은 순','그 발언에 붙은 기사가 많은 순 · 화제가 된 발언']
+];
 /* 본문 인용(payload.bodyq)을 발언 목록에 합친다.
    헤드라인 조각보다 완결된 문장이라, 같은 의원에 본문 인용이 있으면 헤드라인 인용은 감춘다. */
 (function mergeBodyQuotes(){
@@ -2853,11 +2862,21 @@ qtRender=function(){
   // 어떤 필터를 걸어도 같은 기준으로 보이도록 정렬을 고정한다.
   if(!Q.__idx){ try{ Q.forEach((q,i)=>{ if(q.__i==null) q.__i=i; }); Q.__idx=1; }catch(e){} }
   const NAME={}; (D.members||[]).forEach(m=>NAME[m.cd]=m.name);
-  list = list.slice().sort((a,b)=>
-      (b.d||'').localeCompare(a.d||'')                       // 최신 회의부터
-   || (a.m||'').localeCompare(b.m||'','ko')                  // 같은 날은 위원회 가나다
-   || (NAME[a.c]||'').localeCompare(NAME[b.c]||'','ko')      // 같은 위원회는 의원 가나다
-   || ((a.__i||0)-(b.__i||0)));                              // 최종 동률은 원본 순서(발언 흐름)
+  const nQ = q2 => (q2.qn!=null && D.qnews) ? ((D.qnews[q2.qn]||[]).length) : 0;
+  const tie = (a,b)=> (a.m||'').localeCompare(b.m||'','ko')
+                   || (NAME[a.c]||'').localeCompare(NAME[b.c]||'','ko')
+                   || ((a.__i||0)-(b.__i||0));
+  const byNew = (a,b)=> (b.d||'').localeCompare(a.d||'') || tie(a,b);
+  const QT_CMP = {
+    new: byNew,
+    old: (a,b)=> (a.d||'').localeCompare(b.d||'') || tie(a,b),
+    member: (a,b)=> (NAME[a.c]||'').localeCompare(NAME[b.c]||'','ko') || byNew(a,b),
+    cmt: (a,b)=> (a.src==='언론'? (a.ms||'언론') : (a.m||'')).localeCompare(
+                 (b.src==='언론'? (b.ms||'언론') : (b.m||'')),'ko') || byNew(a,b),
+    long: (a,b)=> ((b.s||'').length - (a.s||'').length) || byNew(a,b),
+    news: (a,b)=> (nQ(b)-nQ(a)) || byNew(a,b)
+  };
+  list = list.slice().sort(QT_CMP[qtSort] || byNew);
   // ── facet 카운트: "이걸 누르면 몇 건이 되나"를 뜻하도록, 각자 자기 필터만 제외하고 센다
   const srcCnt={};                                   // 출처 탭: 출처 필터 제외
   Q.forEach(q=>{ if(passMem(q)&&passGrp(q)&&passTag(q)&&passKw(q)&&passQ(q)){
@@ -2882,6 +2901,13 @@ qtRender=function(){
     <div class="qthead">
       <h3>의원이 직접 한 말</h3>
 
+      <div class="frow"><span class="frl">정렬</span>
+      <div class="sortbar" id="qtSortBar">
+        <select id="qtSortSel" aria-label="발언 정렬 기준">
+          ${QT_SORTS.map(o=>`<option value="${o[0]}"${qtSort===o[0]?' selected':''}>${esc(o[1])}</option>`).join('')}
+        </select>
+        <span class="sorthint">${esc((QT_SORTS.find(o=>o[0]===qtSort)||QT_SORTS[0])[2])}</span>
+      </div></div>
       <div class="frow"><span class="frl">출처</span>
       <div class="srcbar" id="srcbar">
         <button data-src="" aria-pressed="${!qtSrc}">전체 <em>${nf(srcCnt.__all||0)}</em></button>
@@ -2902,7 +2928,7 @@ qtRender=function(){
           `<button data-k="${esc(k2)}" aria-pressed="${qtKw===k2}"${(kwCnt[k2]||0)===0?' class="kzero"':''}
             >${esc(k2)} <em>${nf(kwCnt[k2]||0)}</em></button>`).join('')}
       </div></div>`:''}
-      <div class="qtcnt"><b>${nf(list.length)}</b>건<span class="qtord">최신 회의순 · 같은 날은 위원회·의원 가나다순</span></div>
+      <div class="qtcnt"><b>${nf(list.length)}</b>건<span class="qtord">${esc((QT_SORTS.find(o=>o[0]===qtSort)||QT_SORTS[0])[1])} · ${esc((QT_SORTS.find(o=>o[0]===qtSort)||QT_SORTS[0])[2])}</span></div>
     </div>
     <div class="qtgrid">
       ${show.map(q=>{ const m=D.members.find(x=>x.cd===q.c); if(!m) return '';
@@ -2928,6 +2954,9 @@ qtRender=function(){
     </div>
     ${list.length>qtShown?`<button class="qtmore" id="qtMore">${nf(list.length-qtShown)}건 더 보기</button>`:''}`;
   // 탭 내부 검색창은 상단 통합 검색으로 일원화했다(중복 제거)
+  const qss=document.getElementById('qtSortSel');
+  if(qss) qss.onchange=()=>{ qtSort=qss.value; qtShown=60; qtRender();
+    const w2=document.getElementById('qtwrap'); if(w2) w2.scrollIntoView({block:'start',behavior:'smooth'}); };
   document.getElementById('grpbar').onclick=e=>{ const b=e.target.closest('button'); if(!b) return;
     qtGrp=b.dataset.g||null; qtTag=null; qtKw=null; qtShown=60; qtRender(); };
   const tb2=document.getElementById('tagbar2');
@@ -3433,6 +3462,7 @@ function routeQuery(){
   if(viewMode==='qt'){
     if(qtSrc) ps.set('src',qtSrc); if(qtGrp) ps.set('grp',qtGrp);
     if(qtTag) ps.set('tag',qtTag); if(qtKw) ps.set('kw',qtKw);
+    if(qtSort && qtSort!=='new') ps.set('sort',qtSort);
     if(activeParty) ps.set('party',activeParty);
     const k=((qtQ2||'').trim() || q.value.trim()); if(k) ps.set('q',k);
   }
@@ -3450,6 +3480,7 @@ function applyRouteQuery(ps, v){
   if(v==='qt'){
     qtSrc=ps.get('src')||null; qtGrp=ps.get('grp')||null;
     qtTag=ps.get('tag')||null; qtKw=ps.get('kw')||null;
+    { const so2=ps.get('sort'); qtSort=(so2 && QT_SORTS.some(o=>o[0]===so2))? so2 : 'new'; }
     if(ps.has('party')){ activeParty=ps.get('party')||null;
       [...document.querySelectorAll('#parties .chip')].forEach(c=>c.setAttribute('aria-pressed', c.dataset.p===activeParty)); }
     if(ps.get('q')!=null){ qtQ2=ps.get('q'); }
