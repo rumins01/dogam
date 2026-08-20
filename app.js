@@ -186,6 +186,109 @@ function myRender(){
 }
 
 /* ================= 발언 모음 ================= */
+
+/* ── 주제별 언론 보도 (네이버 검색 API · 최근 1년) ──
+   막대·매체 순위는 수집 전량 기준, 기사 목록은 수록분만 — 둘을 섞지 않고 구분해 표시한다 */
+let qtNMon=null, qtNShown=12;
+function nvURL(a){ return 'https://'+(D.nvn.dm[a[3]]||'')+(a[4]||''); }
+/* 발언 1건에 붙는 관련 보도 — 네이버 수집분(q.nq)을 우선하고 없으면 기존 구글뷰스 데이터로 내려간다.
+   반환 형식을 [날짜, 제목, 매체, 링크, 요약, 출처종류]로 통일해 호출부가 분기를 안 갖게 한다. */
+function qNews(q){
+  const NV=D.nvn;
+  if(NV && Array.isArray(q.nq) && q.nq.length){
+    return q.nq.map(i=>NV.a[i]).filter(Boolean)
+      .map(a=>[a[0], a[1], NV.p[a[2]]||'', nvURL(a), a[5]||'', 'nv']);
+  }
+  const old=(q.qn!=null && D.qnews) ? (D.qnews[q.qn]||[]) : [];
+  return old.map(a=>[a[0], a[1], a[2]||'', a[3], '', 'g']);
+}
+function qNewsHTML(items, head){
+  if(!items.length) return '';
+  const nv=items[0][5]==='nv';
+  return '<div class="qxh" style="margin-top:12px">'+esc(head)
+    + ' <em style="font-style:normal;font-weight:500;color:var(--ink3)">'
+    + (nv? '네이버 검색 · 같은 주제 · 발언일 ±10일' : '발언 시기 기준')+'</em></div>'
+    + items.map(a=>'<a class="qxart" href="'+esc(a[3])+'" target="_blank" rel="noopener">'
+      + '<span class="qxt">'+esc(a[1])+'</span>'
+      + '<span class="qxs">'+esc(a[2])+' · '+esc(a[0])+'</span></a>').join('');
+}
+function nvRow(a){
+  const u=nvURL(a), ps=D.nvn.p[a[2]]||'';
+  return '<a class="nrow nrw2" href="'+esc(u)+'" target="_blank" rel="noopener"'
+    + ' data-tip="'+esc(ps)+' · '+esc(a[0])+' · 눌러서 원문 보기">'
+    + '<span class="nd">'+esc(a[0])+'</span>'
+    + '<span class="nt2">'+esc(a[1])+'</span>'
+    + '<span class="nsrc">'+esc(ps)+'</span>'
+    + (a[5]? '<span class="ndsc">'+esc(a[5])+'</span>' : '')
+    + '</a>';
+}
+function tnewsHTML(tag, kwSel){
+  const NV=D.nvn; if(!NV) return '';
+  const ti=(D.tags||[]).indexOf(tag); if(ti<0) return '';
+  const T=NV.t[ti]||NV.t[String(ti)]; if(!T) return '';
+  let arts=(T.i||[]).map(i=>NV.a[i]).filter(Boolean);
+  const mo=NV.mo||[];
+  /* 키워드가 선택되면 수록분 안에서 제목·요약 포함으로 다시 좀힌다.
+     이 때 월별 막대도 수록분 기준이 되므로 전량 기준과 섞지 않게 라벨을 바꿈 */
+  const kwOn = !!(kwSel && arts.length);
+  if(kwOn){ const k=kwSel.toLowerCase();
+    arts = arts.filter(a=>((a[1]||'')+' '+(a[5]||'')).toLowerCase().includes(k)); }
+  let mv, basis;
+  if(kwOn){ const c=Object.fromEntries(mo.map(m=>[m,0]));
+    arts.forEach(a=>{ const m=a[0].slice(0,7); if(m in c) c[m]++; });
+    mv=mo.map(m=>c[m]); basis='수록분 · 「'+kwSel+'」 포함 기준';
+  } else { mv=T.m||[]; basis='수집 전량 기준'; }
+  const mx=Math.max(1,...mv);
+  const peak=mv.indexOf(mx);
+  const list=qtNMon? arts.filter(a=>a[0].slice(0,7)===qtNMon) : arts;
+  const shown=list.slice(0,qtNShown);
+  const monTot=qtNMon? (mv[mo.indexOf(qtNMon)]||0) : (kwOn? arts.length : T.n);
+  if(!arts.length && kwOn) return '<div class="tnews"><div class="thd"><h4>#'+esc(tag)
+    + ' · 최근 1년 언론 보도</h4></div><div class="note">수록된 기사 중에는 「'+esc(kwSel)
+    + '」이 들어간 것이 없어요. 키워드를 다시 눌러 해제하면 이 주제 전체 보도를 볼 수 있어요.</div></div>';
+  return '<div class="tnews">'
+   + '<div class="thd"><h4>#'+esc(tag)+' · 최근 1년 언론 보도</h4>'
+   +   '<span class="tq">'+esc(T.q||'')+'</span></div>'
+   + '<div class="kpis" style="margin:0;grid-template-columns:repeat(3,1fr)">'
+   +   '<div class="kpi" data-tip="네이버 검색 API로 모은 이 주제의 최근 1년 기사 수">'
+   +     '<b>'+nf(kwOn? arts.length : T.n)+'</b><i>기사</i><small>'
+   +     (kwOn? '「'+esc(kwSel)+'」 포함' : esc(T.f||'')+' ~ '+esc(T.l||''))+'</small></div>'
+   +   '<div class="kpi" data-tip="이 주제를 다룬 서로 다른 매체 수">'
+   +     '<b>'+nf(kwOn? new Set(arts.map(a=>a[2])).size : (T.pn||T.p.length))+'</b><i>매체</i><small>중복 제외</small></div>'
+   +   '<div class="kpi" data-tip="보도가 가장 많았던 달">'
+   +     '<b>'+(mo[peak]||'–').slice(2)+'</b><i>최다 보도</i><small>'+nf(mx)+'건</small></div>'
+   + '</div>'
+   + '<div class="tgrid">'
+   +   '<div class="chart"><h5><svg class="ic" aria-hidden="true"><use href="#i-cal"/></svg>월별 보도량</h5>'
+   +     '<div class="cs">막대를 누르면 그 달 기사만 봐요 · '+esc(basis)+'</div>'
+   +     '<div class="ybar">'+mo.map((m,i)=>
+           '<button class="yb'+(qtNMon===m?' on':'')+'" data-tnm="'+esc(m)+'"'
+           + ' data-tip="'+esc(m)+' '+nf(mv[i]||0)+'건">'
+           + '<i style="height:'+Math.max(4,(mv[i]||0)/mx*54).toFixed(0)+'px"></i>'
+           + '<span>'+m.slice(5)+'</span><em>'+(mv[i]||0)+'</em></button>').join('')+'</div></div>'
+   +   '<div class="chart"><h5><svg class="ic" aria-hidden="true"><use href="#i-home"/></svg>어느 매체가 많이 다뤘나</h5>'
+   +     '<div class="cs">상위 8개 · '+esc(basis)+'</div>'
+   +     hbar((kwOn
+           ? Object.entries(arts.reduce((o,a)=>{o[a[2]]=(o[a[2]]||0)+1;return o;},{}))
+               .sort((x,y)=>y[1]-x[1]).slice(0,8).map(x=>({k:NV.p[x[0]]||'', v:x[1]}))
+           : (T.p||[]).slice(0,8).map(x=>({k:NV.p[x[0]]||'', v:x[1]}))), 'var(--accent)') + '</div>'
+   + '</div>'
+   + '<div class="chart"><h5><svg class="ic" aria-hidden="true"><use href="#i-news"/></svg>기사 '
+   +   (qtNMon? esc(qtNMon)+' · ':'') + nf(shown.length)+'건 표시</h5>'
+   +   '<div class="cs">'+(qtNMon
+         ? (kwOn? '이 달 '+nf(monTot)+'건' : '이 달 전체 '+nf(monTot)+'건 중 수록분 '+nf(list.length)+'건')
+           + ' · <a href="javascript:;" data-tnm="">전체 기간 보기</a>'
+         : (kwOn? '「'+esc(kwSel)+'」이 들어간 기사 '+nf(arts.length)+'건'
+                : '1년 전체 '+nf(T.n)+'건 중 수록분 '+nf(arts.length)+'건을 보여줘요'))+'</div>'
+   +   '<div class="nlist">'+(shown.map(nvRow).join('') || '<div class="empty">이 조건의 기사가 없어요</div>')+'</div>'
+   +   (list.length>qtNShown? '<button class="tmore" data-tnmore="1">'+nf(list.length-qtNShown)+'건 더 보기</button>':'')
+   + '</div>'
+   + '<div class="note">'+esc((NV.meta||{}).src||'')+'로 위 검색어를 그대로 써서 모은 것이에요.'
+   +   ' 제목·매체·날짜·요약·링크만 저장했고 본문은 각 매체 저작물이라 눌러서 원문에서 보세요.'
+   +   '<br>검색어가 닿은 기사라 주제와 어긋나는 것이 섞일 수 있고, 이 목록은 의원의 발언을 보도한 기사라는 뜻이 아니에요.</div>'
+   + '</div>';
+}
+
 let qtTag=null, qtShown=60, qtQ='';
 function qtRender(){
   const w=document.getElementById('qtwrap');
@@ -210,6 +313,7 @@ function qtRender(){
         ${TAGS.map(t=>`<button data-t="${esc(t)}" aria-pressed="${qtTag===t}">#${esc(t)}<em>${nf(cnt[t]||0)}</em></button>`).join('')}
       </div>
     </div>
+    ${qtTag? tnewsHTML(qtTag) : ''}
     <div class="qtgrid">
       ${show.map(q=>{ const m=D.members.find(x=>x.cd===q.c); if(!m) return '';
         return `<div class="qtc" style="--pc4:${pc(m.party)}">
@@ -223,10 +327,15 @@ function qtRender(){
     ${list.length>qtShown? `<button class="qtmore" id="qtMore">${nf(list.length-qtShown)}건 더 보기</button>`:''}`;
   document.getElementById('tagbar').onclick=e=>{
     const b=e.target.closest('button'); if(!b) return;
-    qtTag=b.dataset.t||null; qtShown=60; qtRender();
+    qtTag=b.dataset.t||null; qtShown=60; qtNMon=null; qtNShown=12; qtRender();
   };
-  w.querySelectorAll('.qtg span').forEach(sp=>sp.onclick=()=>{ qtTag=sp.dataset.t; qtShown=60; qtRender();
+  w.querySelectorAll('.qtg span').forEach(sp=>sp.onclick=()=>{ qtTag=sp.dataset.t; qtShown=60; qtNMon=null; qtNShown=12; qtRender();
     window.scrollTo({top:0,behavior:'smooth'}); });
+  /* 주제별 보도 패널 — 월 선택 / 더보기 */
+  w.querySelectorAll('[data-tnm]').forEach(el=>el.onclick=ev=>{ ev.preventDefault();
+    const v=el.dataset.tnm; qtNMon = v || null; qtNShown=12; qtRender(); });
+  const tmb=w.querySelector('[data-tnmore]');
+  if(tmb) tmb.onclick=()=>{ qtNShown+=12; qtRender(); };
   w.querySelectorAll('.qwho').forEach(el=>el.onclick=e2=>{ e2.stopPropagation();
     const mm=D.members.find(m=>m.cd===el.dataset.cd); if(mm) open(mm); });
   const mb=document.getElementById('qtMore');
@@ -2147,10 +2256,10 @@ function srcLinks(q,m){
     out.push(`<a href="${vu}" target="_blank" rel="noopener"
       title="국회 회의록 뷰어에서 이 발언 보기 (새 탭)">회의록 원문 </a>`);
   }
-  // 이 발언과 관련된 실제 기사 (의원명 + 발언 키워드로 수집)
-  const arts = (q.qn!=null && D.qnews) ? (D.qnews[q.qn]||[]) : [];
+  // 이 발언과 같은 주제·같은 시기의 실제 기사 (네이버 검색 API 수집분 우선)
+  const arts = qNews(q);
   const nb = arts.length ? `<div class="qnews">
-      <div class="qnh">관련 보도 <em>${esc(m.name)} 의원 · 발언 시기 기준</em></div>
+      <div class="qnh">관련 보도 <em>${arts[0][5]==='nv'?'같은 주제 · 발언일 ±10일':esc(m.name)+' 의원 · 발언 시기 기준'}</em></div>
       ${arts.map(a=>`<a href="${esc(a[3])}" target="_blank" rel="noopener">
         <span class="nt">${esc(a[1])}</span><span class="ns">${esc(a[2])} · ${esc(a[0])}</span></a>`).join('')}
     </div>` : '';
@@ -2761,19 +2870,17 @@ var qtOpen = new Set();            // 펼친 카드 키
 function quoteBody(q, m){
   const nameOf=cd=>{ const y=(D.members||[]).find(z=>z.cd===cd); return y?y.name:'다른 발언자'; };
   if(q.src==='언론'){
-    const arts=(q.qn!=null && D.qnews)?(D.qnews[q.qn]||[]):[];
+    const arts=qNews(q);
     return '<div class="qx">'
      + '<div class="qxh">이 발언이 실린 기사</div>'
      + '<a class="qxart" href="'+esc(q.mu||'#')+'" target="_blank" rel="noopener">'
      + '<span class="qxt">'+esc(q.mt||'')+'</span>'
      + '<span class="qxs">'+esc(q.ms||'')+' · '+esc(q.d)+'</span></a>'
-     + (arts.length? '<div class="qxh" style="margin-top:12px">같은 시기 다른 보도</div>'
-        + arts.slice(0,3).map(a=>'<a class="qxart" href="'+esc(a[3])+'" target="_blank" rel="noopener">'
-          + '<span class="qxt">'+esc(a[1])+'</span><span class="qxs">'+esc(a[2])+' · '+esc(a[0])+'</span></a>').join('') : '')
+     + qNewsHTML(arts.slice(0,3), '같은 시기 다른 보도')
      + '</div>';
   }
   const x2=q.x||[];
-  const arts=(q.qn!=null && D.qnews)?(D.qnews[q.qn]||[]):[];
+  const arts=qNews(q);
   return '<div class="qx">'
    + '<div class="qxh">앞뒤 맥락 · '+esc(q.m)+'위원회 '+esc(q.d)+'</div>'
    + (x2[0]? '<div class="qxc"><b>'+esc(nameOf(x2[0][0]))+'</b><p>'+esc(x2[0][1])+'</p></div>'
@@ -2784,9 +2891,7 @@ function quoteBody(q, m){
    + (q.rid? '<a class="qxlink" href="https://record.assembly.go.kr/assembly/viewer/minutes/xml.do?id='+q.rid
       +'&type=view'+((q.kw&&q.kw[0])?'&schwrd='+encodeURIComponent(q.kw[0]):'')
       +'" target="_blank" rel="noopener">회의록 전문에서 보기 <svg class="ic-sm" aria-hidden="true"><use href="#i-ext"/></svg></a>':'')
-   + (arts.length? '<div class="qxh" style="margin-top:14px">관련 보도</div>'
-      + arts.map(a=>'<a class="qxart" href="'+esc(a[3])+'" target="_blank" rel="noopener">'
-        + '<span class="qxt">'+esc(a[1])+'</span><span class="qxs">'+esc(a[2])+' · '+esc(a[0])+'</span></a>').join('') : '')
+   + qNewsHTML(arts, '관련 보도')
    + '</div>';
 }
 
@@ -2799,7 +2904,7 @@ function qtContextView(){
   const m=(D.members||[]).find(x=>x.cd===q.c);
   const nameOf=cd=>{ const y=(D.members||[]).find(z=>z.cd===cd); return y?y.name:'다른 발언자'; };
   const x2=q.x||[];
-  const arts=(q.qn!=null && D.qnews) ? (D.qnews[q.qn]||[]) : [];
+  const arts=qNews(q);
   const rid=q.rid;
   const kw=(q.kw&&q.kw[0])||'';
   w.innerHTML = `
@@ -2828,7 +2933,9 @@ function qtContextView(){
       ${arts.length?`<div class="qcnews"><div class="qcnh">이 발언과 관련된 보도</div>
         ${arts.map(a=>`<a href="${esc(a[3])}" target="_blank" rel="noopener">
           <span class="nt">${esc(a[1])}</span><span class="ns">${esc(a[2])} · ${esc(a[0])}</span></a>`).join('')}
-        <div class="cs">${esc((D.qnmeta||{}).q||'')} · ${esc((D.qnmeta||{}).win||'')}로 찾았어요. 헤드라인은 각 매체 저작물이에요</div></div>`:''}
+        <div class="cs">${arts[0][5]==='nv'
+          ? '네이버 검색 API · 같은 주제 · 발언일 ±10일로 찾았어요. 이 발언을 보도한 기사라는 뜻은 아니에요'
+          : esc((D.qnmeta||{}).q||'')+' · '+esc((D.qnmeta||{}).win||'')+'로 찾았어요'}. 헤드라인은 각 매체 저작물이에요</div></div>`:''}
     </div>`;
   const bk=document.getElementById('qBack');
   if(bk) bk.onclick=()=>{ qtCtx=null; qtRender(); pushRoute(); };
@@ -2862,7 +2969,8 @@ qtRender=function(){
   // 어떤 필터를 걸어도 같은 기준으로 보이도록 정렬을 고정한다.
   if(!Q.__idx){ try{ Q.forEach((q,i)=>{ if(q.__i==null) q.__i=i; }); Q.__idx=1; }catch(e){} }
   const NAME={}; (D.members||[]).forEach(m=>NAME[m.cd]=m.name);
-  const nQ = q2 => (q2.qn!=null && D.qnews) ? ((D.qnews[q2.qn]||[]).length) : 0;
+  const nQ = q2 => (Array.isArray(q2.nq)&&q2.nq.length) ? q2.nq.length
+                 : ((q2.qn!=null && D.qnews) ? ((D.qnews[q2.qn]||[]).length) : 0);
   const tie = (a,b)=> (a.m||'').localeCompare(b.m||'','ko')
                    || (NAME[a.c]||'').localeCompare(NAME[b.c]||'','ko')
                    || ((a.__i||0)-(b.__i||0));
@@ -2930,6 +3038,7 @@ qtRender=function(){
       </div></div>`:''}
       <div class="qtcnt"><b>${nf(list.length)}</b>건<span class="qtord">${esc((QT_SORTS.find(o=>o[0]===qtSort)||QT_SORTS[0])[1])} · ${esc((QT_SORTS.find(o=>o[0]===qtSort)||QT_SORTS[0])[2])}</span></div>
     </div>
+    ${qtTag? tnewsHTML(qtTag, qtKw) : ''}
     <div class="qtgrid">
       ${show.map(q=>{ const m=D.members.find(x=>x.cd===q.c); if(!m) return '';
         const key=qKey(q); const open2=qtOpen.has(key);
@@ -2958,16 +3067,21 @@ qtRender=function(){
   if(qss) qss.onchange=()=>{ qtSort=qss.value; qtShown=60; qtRender();
     const w2=document.getElementById('qtwrap'); if(w2) w2.scrollIntoView({block:'start',behavior:'smooth'}); };
   document.getElementById('grpbar').onclick=e=>{ const b=e.target.closest('button'); if(!b) return;
-    qtGrp=b.dataset.g||null; qtTag=null; qtKw=null; qtShown=60; qtRender(); };
+    qtGrp=b.dataset.g||null; qtTag=null; qtKw=null; qtShown=60; qtNMon=null; qtNShown=12; qtRender(); };
   const tb2=document.getElementById('tagbar2');
   if(tb2) tb2.onclick=e=>{ const b=e.target.closest('button'); if(!b) return;
-    qtTag=qtTag===b.dataset.t?null:b.dataset.t; qtKw=null; qtShown=60; qtRender(); };
+    qtTag=qtTag===b.dataset.t?null:b.dataset.t; qtKw=null; qtShown=60; qtNMon=null; qtNShown=12; qtRender(); };
   const kb=document.getElementById('kwbar');
   if(kb) kb.onclick=e=>{ const b=e.target.closest('button'); if(!b) return;
-    qtKw=qtKw===b.dataset.k?null:b.dataset.k; qtShown=60; qtRender(); };
+    qtKw=qtKw===b.dataset.k?null:b.dataset.k; qtShown=60; qtNMon=null; qtNShown=12; qtRender(); };
+  /* 주제별 언론 보도 패널 — 월 선택 · 더보기 */
+  w.querySelectorAll('[data-tnm]').forEach(el=>el.onclick=ev=>{ ev.preventDefault(); ev.stopPropagation();
+    const v=el.dataset.tnm; qtNMon = (v && qtNMon!==v) ? v : null; qtNShown=12; qtRender(); });
+  const tmb2=w.querySelector('[data-tnmore]');
+  if(tmb2) tmb2.onclick=()=>{ qtNShown+=12; qtRender(); };
   w.querySelectorAll('.qtg span').forEach(sp=>sp.onclick=()=>{
     const t=sp.dataset.t; qtGrp=Object.keys(TAG_GROUPS).find(g=>TAG_GROUPS[g].includes(t))||null;
-    qtTag=t; qtKw=null; qtShown=60; qtRender(); window.scrollTo({top:0,behavior:'smooth'}); });
+    qtTag=t; qtKw=null; qtShown=60; qtNMon=null; qtNShown=12; qtRender(); window.scrollTo({top:0,behavior:'smooth'}); });
   w.querySelectorAll('.qw').forEach(el=>el.onclick=()=>open(D.members.find(m=>m.cd===el.dataset.cd)));
   const mb=document.getElementById('qtMore'); if(mb) mb.onclick=()=>{ qtShown+=60; qtRender(); };
   try{ pushRouteSoon(); }catch(e){}
@@ -3626,6 +3740,8 @@ const DATA_DICT=[
  ['sums','의안번호 → 제안이유·주요내용 요약 3줄'],
  ['assets','의원cd → 재산. t=총액(천원), p=종전, a=자산합, b=채무, c=[분류,금액], r=[관계,금액], i=신고내역(국회공보 원문), rk=순위 · 277명'],
  ['news5 / qnews / blog','의원cd → 5년 보도목록 / 발언 관련 보도 / 블로그 글 (제목·매체·날짜·링크만)'],
+ ['nvn','주제별 언론 보도 (네이버 검색 API · 최근 1년). p=매체명 사전, dm=도메인 사전, mo=13개월 버킷, a=기사[날짜,제목,매체idx,도메인idx,경로,요약90자], t=태그idx → {i:수록기사 idx, n:전량 건수, pn:매체수, f/l:최초·최종일, m:월별 건수, p:상위매체, q:검색어}'],
+ ['quotes[].nq','발언 → 같은 주제·발언일 ±10일 기사의 nvn.a 인덱스 (최대 3건, 5,084건에 부여)'],
  ['geo','선거구 지도. features(254개 path)·outlines·labels — 오마이뉴스 2024_22_elec_map(MIT)'],
  ['quiz','매칭 기본 문항(의안ID·요약)'],
  ['sched / cal','의원 일정(수집 시점 기록)'],
