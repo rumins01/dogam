@@ -2550,52 +2550,147 @@ function metaBullets(meta){
 
 /* 정밀 라운드 문항 설명 — 제안이유 요약을 첫 5문항과 같은 가벼운 해요체 2~3줄로.
    법률 문어체 어미를 구어체로 바꾸고, 숫자·기한은 굵게 강조한다. */
-function easyize(sum, meta){
-  if(!sum) return bulletize(sum, meta);
+/* 제안이유 원문 → 퀴즈용 3줄 핵심 요약.
+   기본 5문항(D.quiz.easy)은 수집 단계에서 만들어 두지만, 정밀 라운드 문항은
+   즉석 선정이라 여기서 만든다. 예전에는 앞 3문장을 어미만 바꿔 내보내서
+   법령 인용과 120자짜리 문장이 그대로 남았다 → 기본 문항과 품질이 어긋났다.
+   지어내지 않고 원문에서 고르고 줄이기만 한다. */
+function easyLines(sum, meta, maxLen){
+  const LIM = maxLen || 72;
+  if(!sum) return [];
   let t=String(sum).replace(/^\s*\d+\.\s*/,'')
     .replace(/^대안의\s*제안이유\s*(및\s*주요내용)?/,'')
     .replace(/^제안이유\s*(및\s*주요내용)?/,'')
     .replace(/\d+\.\s*주요내용/g,' ')
     .replace(/참고사항[\s\S]*$/,'').replace(/주요내용/g,' ')
+    // 법령 인용은 읽기를 막는다: 호수까지 붙은 인용은 통째로, 단순 법명은 괄호만 벗긴다
+    .replace(/「법률\s*제\s*[\d,]+\s*호[^」]*」\s*(?:에서|에|의)?\s*(?:정한|규정한|따른)?\s*/g,'')
+    .replace(/「([^」]{1,28})」/g,'$1')
     .replace(/\(안\s*제[^)]*\)/g,'').replace(/\(제\d+조[^)]*\)/g,'')
     .replace(/["“”]/g,'').replace(/\s+/g,' ').trim();
-  let parts=t.split(/(?<=[임함음됨다])\.\s*/).map(x=>x.trim().replace(/\.$/,''))
-    .filter(x=>x.length>=12).slice(0,3);
-  if(!parts.length) return bulletize(sum, meta);
-  const soft=s=>{
-    let x=s
-      .replace(/하고자 하는 것임$|하려는 것임$|하고자 함$/,'하려는 법이에요')
-      .replace(/마련하려는 것$|하려는 것$/,'하려는 거예요')
-      .replace(/려는 것임$/,'려는 법이에요')
-      .replace(/필요가 있음$|필요함$/,'필요하다는 거예요')
-      .replace(/제기되고 있음$/,'제기돼요').replace(/지적이 있음$/,'지적이 있어요')
-      .replace(/제기됨$/,'제기돼요')
-      .replace(/실정임$/,'실정이에요').replace(/상황임$/,'상황이에요')
-      .replace(/하였음$/,'했어요').replace(/되었음$/,'됐어요')
-      .replace(/있음$/,'있어요').replace(/없음$/,'없어요')
-      .replace(/있다$/,'있어요').replace(/없다$/,'없어요')
-      .replace(/한다$/,'해요').replace(/된다$/,'돼요').replace(/이다$/,'이에요')
-      .replace(/였음$/,'였어요').replace(/발생함$/,'생겼어요').replace(/발생하였음$/,'생겼어요')
-      .replace(/규정하고 있음$/,'정하고 있어요').replace(/규정함$/,'정했어요')
-      .replace(/않음$/,'않아요').replace(/많음$/,'많아요').replace(/같음$/,'같아요')
-      .replace(/받음$/,'받아요').replace(/았음$/,'았어요')
-      .replace(/함$/,'해요').replace(/됨$/,'돼요').replace(/음$/,'어요').replace(/임$/,'이에요');
-    return x;
+
+  const strip=x=>x.replace(/^(?:대안의\s*)?(?:[가-하]\.|[0-9]+[.)])\s*/,'').trim();
+  let parts;
+  /* 대안 요약은 '가. ~ 나. ~'로 주요내용을 나열한다. 그 항목 자체가 핵심이라
+     프로즈를 자르는 것보다 낫다. 2개 이상 잡힐 때만 쓴다. */
+  const enumParts = t.split(/\s(?=(?:[가-하]\.)\s)/)
+    .map(x=>strip(x).replace(/\.$/,'').trim()).filter(x=>x.length>=14 && x.length<=200);
+  if(enumParts.length>=3){
+    parts = enumParts;
+  } else {
+    parts = t.split(/(?<=[임함음됨다])\.\s*/).map(x=>strip(x).replace(/\.$/,''))
+      .filter(x=>x.length>=12);
+  }
+  if(!parts.length) return [];
+
+  /* 앞 3문장이 아니라 '무엇을 하려는가 / 어떻게 바꾸는가 / 왜 필요한가'를 대표하는 문장을 고른다 */
+  if(parts.length>3){
+    const score=(x,i)=>{
+      let v=0;
+      if(/(하려는 것|하려는|하고자|목적으로|취지)/.test(x)) v+=6;
+      if(/(하도록|규정|신설|명시|의무|근거를 마련|연장|확대|상향|인상|완화|강화|폐지|도입)/.test(x)) v+=5;
+      if(/(문제|어렵|미비|부족|우려|지적|실정|한계|곤란|없는)/.test(x)) v+=4;
+      if(/(현행|현재)/.test(x)) v+=2;
+      if(i===0) v+=2;
+      // 자르지 않고 그대로 실을 수 있는 문장을 크게 우대한다. 잘린 문장이 3줄을
+      // 채우면 읽는 사람은 '요약이 덜 됐다'고 느낀다.
+      if(x.length<=LIM) v+=7;
+      else if(x.length<=LIM*1.35) v+=3;
+      v -= Math.max(0, (x.length-LIM*1.35)/40);
+      return v;
+    };
+    parts = parts.map((x,i)=>({x,i,s:score(x,i)})).sort((a,b)=>b.s-a.s).slice(0,3)
+      .sort((a,b)=>a.i-b.i).map(o=>o.x);
+  } else {
+    // 3문장 이하라도 짧은 것부터 살리되 원문 순서는 지킨다
+    parts = parts.map((x,i)=>({x,i})).sort((a,b)=>
+        ((a.x.length<=LIM?0:1)-(b.x.length<=LIM?0:1)) || (a.i-b.i))
+      .slice(0,3).sort((a,b)=>a.i-b.i).map(o=>o.x);
+  }
+
+  const soft=x=>x
+    .replace(/하고자 하는 것임$|하려는 것임$|하고자 함$/,'하려는 법이에요')
+    .replace(/마련하려는 것$|하려는 것$/,'하려는 거예요')
+    .replace(/려는 것임$/,'려는 법이에요')
+    .replace(/필요가 있음$|필요함$/,'필요하다는 거예요')
+    .replace(/제기되고 있음$/,'제기돼요').replace(/지적이 있음$/,'지적이 있어요')
+    .replace(/제기됨$/,'제기돼요')
+    .replace(/실정임$/,'실정이에요').replace(/상황임$/,'상황이에요')
+    .replace(/하였음$/,'했어요').replace(/되었음$/,'됐어요')
+    .replace(/있음$/,'있어요').replace(/없음$/,'없어요')
+    .replace(/있다$/,'있어요').replace(/없다$/,'없어요')
+    .replace(/한다$/,'해요').replace(/된다$/,'돼요').replace(/이다$/,'이에요')
+    .replace(/였음$/,'였어요').replace(/발생함$/,'생겼어요').replace(/발생하였음$/,'생겼어요')
+    .replace(/규정하고 있음$/,'정하고 있어요').replace(/규정함$/,'정했어요')
+    .replace(/않음$/,'않아요').replace(/많음$/,'많아요').replace(/같음$/,'같아요')
+    .replace(/받음$/,'받아요').replace(/았음$/,'았어요')
+    .replace(/함$/,'해요').replace(/됨$/,'돼요').replace(/음$/,'어요').replace(/임$/,'이에요');
+
+  /* 글자 수로 자르면 '…하도록 하…'처럼 어간에서 끊겨 요약이 덜 된 것처럼 보인다.
+     절 단위로 담고, 마지막 절의 연결어미를 종결어미로 바꿔 문장을 닫는다. */
+  const STEM={'하':'해요','되':'돼요','있':'있어요','없':'없어요','않':'않아요',
+              '받':'받아요','같':'같아요','많':'많아요','삼':'삼아요','드':'들어요'};
+  const closeClause=y=>{
+    y=y.trim().replace(/[,·]+$/,'');
+    // 연결어미 제거 → 어간만 남긴다
+    y=y.replace(/(으로써|으로서|함으로써|므로|면서|는데|은데|으나|지만|거나|도록|고자)$/,'')
+       .trim().replace(/[,·]+$/,'');
+    /* '~에 대하여/관하여/위하여'는 부사절이라 종결로 바꾸면 '건축물에 대해요'처럼
+       뜻이 어긋난다. 이런 꼬리는 잘라내고 정직하게 말줄임으로 끝낸다. */
+    const SUB=/(대하|관하|위하|의하|통하|기하|따르|이르|비하|더하)$/;
+    if(SUB.test(y)) return y.replace(SUB,'').trim().replace(/[,·]+$/,'')+'…';
+    if(/(함|됨|음|임)$/.test(y)) return soft(y);           // 함 → 해요
+    const m=y.match(/(하여|하고|하며|되어|되고|되며)$/);
+    if(m){ const base=m[1][0]==='하'?'해요':'돼요'; return y.slice(0,-m[1].length)+base; }
+    const k=y.slice(-1);
+    if(STEM[k]) return y.slice(0,-1)+STEM[k];
+    if(/[가-힣]$/.test(y)) return y+'…';
+    return y+'…';
   };
-  // 너무 긴 문장은 앞쪽 절만 남긴다 (5문항 수준의 호흡)
-  const trim1=s=>{
-    if(s.length<=120) return s;
-    const cut=s.slice(0,120);
-    const i=Math.max(cut.lastIndexOf('며 '),cut.lastIndexOf('고 '),cut.lastIndexOf(', '));
-    return (i>40? s.slice(0,i+1) : cut).trim().replace(/[,며고]$/,'')+'…';
+  const shorten=x=>{
+    if(x.length<=LIM) return x;
+    const cl=x.split(/(?<=(?:으로써|으로서|므로|면서|는데|은데|으나|지만|하여|하고|하며|되어|되고|되며|거나|,))\s+/);
+    let acc='';
+    for(const c of cl){
+      if(!acc){ acc=c; continue; }
+      if((acc+' '+c).length>LIM) break;
+      acc+=' '+c;
+    }
+    if(acc.length<=LIM) return closeClause(acc);
+    // 첫 절부터 긴 경우: 단어 경계까지만 되돌린 뒤 닫는다
+    const head=acc.slice(0, LIM);
+    const sp=head.lastIndexOf(' ');
+    return closeClause(sp>LIM*0.45? head.slice(0,sp) : head);
   };
-  const bold=s=>{
-    let n=0;
-    return s.replace(/(\d[\d,.]*\s?(?:년|개월|월|일|%|억\s?원|만\s?원|천\s?원|원|명|건|배|회|시간|세)(?:까지|부터|간|씩)?)/g,
-      m=>(++n<=2? '<b>'+m+'</b>' : m));
+
+  /* 굵게는 '무엇이 어떻게 바뀌는가'에만. 예전엔 날짜를 기계적으로 굵게 해 뜻 없는 강조가 됐다 */
+  const CHANGE=/(연장|확대|상향|인상|완화|강화|축소|인하|폐지|도입|신설|늘리|낮추|줄이|유예|연기|허용|금지)/;
+  const mark=x=>{
+    if(!CHANGE.test(x)) return x;
+    // 월·일은 제외한다 — '2026년 10월 2일로'에서 '2일로'가 굵어지는 식의 오강조가 났다
+    const re=/(\d[\d,.]*\s?(?:년|개월|%|억\s?원|만\s?원|천\s?원|원|명|건|배|회|시간|세|퍼센트)(?:까지|부터|으로|로|간|씩|더)?)/g;
+    let done=false;
+    return x.replace(re,(m,g,off)=>{
+      if(done) return m;
+      const before=x.slice(Math.max(0,off-14), off);
+      if(/(시행|공포|예정|현행|기준)\s*$/.test(before)) return m;   // 시행 예정일 등은 강조 대상이 아님
+      const near=x.slice(off, off+16);
+      const anchored=/(까지|부터|으로|로|더)$/.test(m.trim()) || CHANGE.test(near);
+      if(!anchored) return m;
+      done=true; return '**'+m.trim()+'**';
+    });
   };
-  const out=parts.map(p=>bold(esc(trim1(soft(p)))));
-  return '<ul class="ezb">'+out.map(x=>'<li>'+x+'</li>').join('')+'</ul>';
+
+  return parts.map(p=>mark(shorten(soft(p)))).filter(x=>x && x.length>=10);
+}
+/* 마크다운 굵게(**...**)를 안전하게 HTML로 */
+function easyHTML(line){
+  return esc(line).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>');
+}
+function easyize(sum, meta){
+  const lines=easyLines(sum, meta);
+  if(!lines.length) return bulletize(sum, meta);
+  return '<ul class="ezb">'+lines.map(x=>'<li>'+easyHTML(x)+'</li>').join('')+'</ul>';
 }
 function bulletize(sum, meta){
   if(!sum) return metaBullets(meta);
@@ -2783,8 +2878,10 @@ quizRender=function(){
       <div class="q2ask">내가 만일 국회의원이라면<br>이 법안, 어떻게 했을까요?</div>
       <h3 class="q2t">${esc(q.name)}</h3>
       <div class="q2m">${esc(q.dt)} 본회의 · 찬성 ${nf(q.yes)} · 반대 ${nf(q.nay)}${q.blank?` · 기권 ${nf(q.blank)}`:''}</div>
-      ${q.easy? `<ul class="q2s">${q.easy.map(b=>`<li>${esc(b).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>')}</li>`).join('')}</ul>`
-        : `<div class="q2s" style="list-style:none">${easyize((D.vsums||{})[q.id]||D.sums[q.billNo], q)}</div>`}
+      ${(()=>{ const ls=(q.easy&&q.easy.length)? q.easy
+            : easyLines((D.vsums||{})[q.id] || (D.sums||{})[q.billNo], q);
+          return ls.length? `<ul class="q2s">${ls.map(x=>`<li>${easyHTML(x)}</li>`).join('')}</ul>`
+            : `<div class="q2s" style="list-style:none;color:var(--ink3)">이 법안은 제안이유가 등록돼 있지 않아요. 아래 원문에서 확인할 수 있어요.</div>`; })()}
       <div class="q2a">
         <button data-a="y" class="${ANS[q.id]==='y'?'on y':''}"><i></i>찬성</button>
         <button data-a="n" class="${ANS[q.id]==='n'?'on n':''}"><i></i>반대</button>
