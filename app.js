@@ -3521,38 +3521,60 @@ function updateTitle(){
   setTimeout(updateTitle, 0);
 })();
 
-/* ── 의원 상세 시트: 포커스 이동·트랩·배경 격리 ── */
+/* ── 의원 상세 시트: 포커스 이동·트랩·배경 격리 ──
+   배경 격리(inert)는 close()를 감싸는 방식으로 하면 안 된다.
+   scrim 클릭 리스너가 '감싸기 이전의 원본 close' 참조를 들고 있어서,
+   딤 배경으로 닫으면 inert가 그대로 남아 이후 모든 카드 클릭이 막혔다.
+   그래서 시트의 class 변화를 감시해 열림/닫힘 한 곳에서만 처리한다. */
 (function(){
   let lastFocus=null;
   const bgEls=()=>[document.querySelector('main'),document.querySelector('.mast'),
     document.querySelector('.navbar'),document.getElementById('toolbar'),
     document.getElementById('fRow'),document.getElementById('idx'),
     document.querySelector('footer'),document.getElementById('cmpbar')].filter(Boolean);
+  const setInert=on=>bgEls().forEach(el=>{ try{ el.inert=on; }catch(e){} });
+
   const _o=open;
   open=function(m){
-    lastFocus=document.activeElement;
+    if(!sheet.classList.contains('on')) lastFocus=document.activeElement;
     _o(m);
     try{
       sheet.setAttribute('aria-label', (m&&m.name? m.name+' 의원 상세':'의원 상세'));
       sheet.tabIndex=-1;
-      bgEls().forEach(el=>{ try{ el.inert=true; }catch(e){} });
       setTimeout(()=>{ try{ sheet.focus({preventScroll:true}); }catch(e){} }, 40);
     }catch(e){}
   };
-  const _c=close;
-  close=function(){
-    _c();
-    try{
-      bgEls().forEach(el=>{ try{ el.inert=false; }catch(e){} });
-      if(lastFocus && lastFocus!==document.body && document.contains(lastFocus)) lastFocus.focus({preventScroll:true});
-      else{ const c=document.querySelector('.card'); if(c) c.focus({preventScroll:true}); }
-    }catch(e){}
+
+  /* 어떤 경로로 닫히든(scrim·X·ESC·드래그·라우터) 여기서 단일 처리 */
+  let wasOn=false;
+  new MutationObserver(()=>{
+    const on=sheet.classList.contains('on');
+    if(on===wasOn) return;
+    wasOn=on;
+    setInert(on);
+    if(!on){
+      try{
+        if(lastFocus && lastFocus!==document.body && document.contains(lastFocus))
+          lastFocus.focus({preventScroll:true});
+        else{ const c=document.querySelector('.card'); if(c) c.focus({preventScroll:true}); }
+      }catch(e){}
+    }
+  }).observe(sheet,{attributes:true,attributeFilter:['class']});
+
+  /* 안전망 — 어떤 이유로든 시트가 닫혔는데 배경이 잠겨 있으면 즉시 푼다 */
+  const unstick=()=>{
+    if(!sheet.classList.contains('on') && document.querySelector('main')?.inert){ setInert(false); wasOn=false; }
   };
+  ['pointerdown','keydown','visibilitychange'].forEach(ev=>
+    document.addEventListener(ev, unstick, true));
+  addEventListener('pageshow', unstick);
+  addEventListener('popstate', ()=>setTimeout(unstick,0));
+
   /* 문서 레벨에 둔다 — 재렌더로 포커스가 body로 빠지면 시트에 붙은 리스너는 못 잡는다 */
   document.addEventListener('keydown',e=>{
     if(sheet.classList.contains('on')) trapTab(e, sheet);
   });
-  /* 시트 안 별표·비교 버튼 키보드 지원 */
+  /* 시트 안 별표 버튼 키보드 지원 */
   sheet.addEventListener('keydown',e=>{
     const st=e.target.closest && e.target.closest('.starbtn');
     if(st && (e.key==='Enter'||e.key===' ')){ e.preventDefault(); e.stopPropagation(); toggleStar(st.dataset.cd); }
