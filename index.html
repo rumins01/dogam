@@ -2088,7 +2088,7 @@ footer{background:transparent!important;padding:0!important;margin:28px auto 0!i
   // GitHub Pages가 JSON에 cache-control: max-age=600을 주므로, 버전이 없으면
   // 재방문자가 배포 직후 최대 10분간 어제 데이터를 본다(2026-08-20 실측).
   // 매일 09시에 갱신되는 사이트라 매일 같은 일이 생긴다.
-  var V='5dd1b4ae5feb';
+  var V='35cd7b9caeba';
   var FILES=['dogam-a.json?v='+V,'dogam-b.json?v='+V];
   var TOTAL_RAW=42445464;                 // 압축 해제 기준 총 바이트(진행률 분모)
   var bar=document.getElementById('bootBar'), txt=document.getElementById('bootTxt'),
@@ -2119,7 +2119,7 @@ footer{background:transparent!important;padding:0!important;margin:28px auto 0!i
     Promise.all([fetchOne(0), fetchOne(1)]).then(function(parts){
       window.__DOGAM__=Object.assign({}, parts[0], parts[1]);
       bar.style.width='100%'; txt.textContent='화면을 그리고 있어요…';
-      var s=document.createElement('script'); s.src='app.js';
+      var s=document.createElement('script'); s.src='app.js?v='+V;   // 데이터와 같은 버전 — 빼면 구 코드가 새 데이터를 렌더한다
       s.onload=function(){ var b=document.getElementById('boot'); if(b) b.remove(); };
       s.onerror=function(){ txt.textContent='화면 코드를 불러오지 못했어요.'; rb.hidden=false; };
       document.body.appendChild(s);
