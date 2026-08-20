@@ -1437,11 +1437,6 @@ footer{background:transparent!important;padding:0!important;margin:28px auto 0!i
      지도 안 제스처는 페이지 스크롤로 새지 않는다. 페이지는 지도 밖에서 스크롤. */
   #map{ touch-action:none }
   .mapbox{ height:min(58vh,460px)!important; min-height:300px }
-  /* 지역 점프 칩 — 여러 줄로 지도를 덮지 않게 한 줄 가로 스크롤 */
-  .mapjump{ flex-wrap:nowrap; overflow-x:auto; max-width:calc(100% - 20px);
-    scrollbar-width:none; -webkit-overflow-scrolling:touch }
-  .mapjump::-webkit-scrollbar{ display:none }
-  .mapjump button{ flex:0 0 auto }
   /* 의원 상세 — 프로필·지표는 함께 위로 밀려 올라가고, 탭 줄만 상단에 고정.
      .tabs가 .sh-hd 안에 있어 탭만 sticky로는 부모와 함께 사라진다.
      헤더 전체를 sticky로 두고 top을 -(헤더높이-탭높이)로 밀어 탭 줄만 남긴다. (--shOff는 JS가 갱신) */
@@ -1634,10 +1629,7 @@ footer{background:transparent!important;padding:0!important;margin:28px auto 0!i
   /* ── 터치 타깃 하한 ── */
   button,.chip,a.btn{ min-height:36px }
   .mhelp{ width:26px!important; height:26px!important; min-height:26px }
-  .starbtn{ min-width:40px; min-height:40px; display:inline-flex; align-items:center; justify-content:center }
-  /* 별표 터치영역(40px)과 안 겹치게 비교 칩을 왼쪽으로, 세로 중심 맞춤 */
-  .card .starbtn{ right:2px; top:4px }
-  .card .cmpc{ right:44px; top:13px }
+  .starbtn{ min-width:40px; min-height:40px }
 
   /* ── 작은 글씨 하한 (가독성): 본문성 텍스트는 11px 이상 ── */
   .qmt,.qsrc2,.qxs,.pof,.vnote,.tip,.meta,.sub{ font-size:0.71875rem!important }

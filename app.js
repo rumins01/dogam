@@ -1787,7 +1787,7 @@ function open(x){
         `</tbody></table>` : '<div class="empty">겸직 내역이 없어요</div>'}
     </section>
     <section class="sec" data-p="s" hidden>
-      <div class="note">영상회의록 기준 ${nf(x.speech.n)}건</div>
+      <div class="note">국정감사 회의록 발언 구간 ${nf(x.speech.n)}건 · 상한 없는 전체 집계</div>
       ${(()=>{ const my=(D.quotes||[]).filter(z=>z.c===x.cd);
         return my.length? `<h4 style="margin-top:4px">국정감사 발언 원문 ${nf(my.length)}건
           <a href="javascript:;" data-qmem="${esc(x.name)}" style="font-size:0.78125rem;font-weight:600;margin-left:8px;color:var(--accent)">발언 모음에서 보기 →</a></h4>
@@ -3496,7 +3496,7 @@ function updateTitle(){
   const bgEls=()=>[document.querySelector('main'),document.querySelector('.mast'),
     document.querySelector('.navbar'),document.getElementById('toolbar'),
     document.getElementById('fRow'),document.getElementById('idx'),
-    document.querySelector('footer')].filter(Boolean);
+    document.querySelector('footer'),document.getElementById('cmpbar')].filter(Boolean);
   const _o=open;
   open=function(m){
     lastFocus=document.activeElement;
@@ -3517,14 +3517,9 @@ function updateTitle(){
       else{ const c=document.querySelector('.card'); if(c) c.focus({preventScroll:true}); }
     }catch(e){}
   };
-  sheet.addEventListener('keydown',e=>{
-    if(e.key!=='Tab') return;
-    const f=[...sheet.querySelectorAll('button,[href],input,select,textarea,[tabindex]:not([tabindex="-1"])')]
-      .filter(el=>el.offsetParent!==null);
-    if(!f.length) return;
-    const first=f[0], last=f[f.length-1];
-    if(e.shiftKey && document.activeElement===first){ last.focus(); e.preventDefault(); }
-    else if(!e.shiftKey && document.activeElement===last){ first.focus(); e.preventDefault(); }
+  /* 문서 레벨에 둔다 — 재렌더로 포커스가 body로 빠지면 시트에 붙은 리스너는 못 잡는다 */
+  document.addEventListener('keydown',e=>{
+    if(sheet.classList.contains('on')) trapTab(e, sheet);
   });
   /* 시트 안 별표·비교 버튼 키보드 지원 */
   sheet.addEventListener('keydown',e=>{
@@ -3738,44 +3733,6 @@ document.addEventListener('click',e=>{
   if(cb){ e.stopPropagation(); cmpToggle(cb.dataset.cd); }
 });
 cmpBar();
-/* 모바일 비교창 — 스크롤은 그대로, 경계에서만 닫힌다.
-   스크롤 컨테이너는 .cmpin이 아니라 #cmpModal(overflow:auto)이다.
-   ① 맨 위에서 아래로 끌어내리면 닫힘 (표준 바텀시트 패턴)
-   ② 맨 아래까지 스크롤한 뒤 계속 내리면(overscroll) 닫힘 */
-(function(){
-  const md=document.getElementById('cmpModal'), ci=md&&md.querySelector('.cmpin'); if(!ci) return;
-  let sy=0, dy=0, on=false, startTop=false, startBot=false;
-  const TH=90;
-  const atTop=()=>md.scrollTop<=0;
-  const atBot=()=>md.scrollHeight>md.clientHeight+4 && md.scrollTop+md.clientHeight>=md.scrollHeight-2;
-  const reset=snap=>{
-    ci.style.transition = snap ? 'transform .22s cubic-bezier(.2,0,0,1)' : '';
-    ci.style.transform='';
-    if(snap) setTimeout(()=>{ ci.style.transition=''; },240);
-  };
-  md.addEventListener('touchstart',e=>{
-    if(innerWidth>640 || e.touches.length!==1){ on=false; return; }
-    on=true; sy=e.touches[0].clientY; dy=0;
-    startTop=atTop(); startBot=atBot();
-    ci.style.transition='none';
-  },{passive:true});
-  md.addEventListener('touchmove',e=>{
-    if(!on) return;
-    dy=e.touches[0].clientY-sy;
-    // 맨 위에서 시작해 아래로 끄는 중일 때만 시트를 따라 내린다
-    if(startTop && dy>0 && atTop()){ ci.style.transform='translateY('+dy+'px)'; }
-    else ci.style.transform='';
-  },{passive:true});
-  const end=()=>{
-    if(!on) return; on=false;
-    if(startTop && dy>TH && atTop()){ reset(false); cmpClose(); }
-    else if(startBot && dy<-TH && atBot()){ reset(false); cmpClose(); }  // 바닥에서 더 내림
-    else reset(true);
-    dy=0;
-  };
-  md.addEventListener('touchend',end,{passive:true});
-  md.addEventListener('touchcancel',end,{passive:true});
-})();
 /* 시트가 열릴 때 비교 버튼 상태 갱신 */
 (function(){ const _o2=open; open=function(m){ _o2(m); setTimeout(cmpPaintBtns,50); }; })();
 
@@ -3797,6 +3754,61 @@ cmpBar();
       dToast('설정했어요. 새로고침 후 적용돼요.'); };
     paint();
   }
+})();
+
+/* ── 공용 포커스 트랩 ── */
+/* a[href]로 한정 — [href]만 쓰면 SVG <use>까지 잡혀 '마지막 요소' 판정이 깨진다.
+   tabIndex>=0 필터로 실제 포커스 가능한 것만 남긴다. */
+const FOCUSABLE='a[href],button,input,select,textarea,summary,[tabindex]:not([tabindex="-1"])';
+/* 닫힌 <details> 내부는 offsetParent가 남아 있어 '보인다'고 오판된다.
+   그 상태로 두면 목록 끝에 포커스 불가 요소가 끼어 마지막 감지가 실패한다. */
+function isFocusable(el){
+  if(el.disabled || el.tabIndex<0) return false;
+  if(typeof el.checkVisibility==='function'){
+    if(!el.checkVisibility({checkVisibilityCSS:true, contentVisibilityAuto:true})) return false;
+  } else if(el.offsetParent===null){ return false; }
+  const d=el.closest('details:not([open])');
+  if(d && el!==d.querySelector(':scope > summary')) return false;
+  return true;
+}
+function trapTab(e, root){
+  if(e.key!=='Tab' || !root) return;
+  const f=[...root.querySelectorAll(FOCUSABLE)].filter(isFocusable);
+  if(!f.length) return;
+  const first=f[0], last=f[f.length-1], a=document.activeElement;
+  // 루트 밖에 포커스가 있거나 경계에 있으면 루트 안으로 되돌린다
+  if(!root.contains(a)){ first.focus(); e.preventDefault(); return; }
+  if(e.shiftKey && a===first){ last.focus(); e.preventDefault(); }
+  else if(!e.shiftKey && a===last){ first.focus(); e.preventDefault(); }
+}
+/* ── 비교·사전 모달 포커스 관리 ── */
+(function(){
+  const modal=()=>document.getElementById('cmpModal');
+  let lastF=null;
+  const _show=cmpShow;
+  cmpShow=function(){
+    // 모달이 이미 열려 있으면(탭 전환) 복귀 지점을 덮어쓰지 않는다
+    if(!modal()?.classList.contains('on')) lastF=document.activeElement;
+    _show();
+    const m=modal(); if(!m||!m.classList.contains('on')) return;
+    const inner=m.querySelector('.cmpin'); if(inner){ inner.tabIndex=-1;
+      setTimeout(()=>{ try{ inner.focus({preventScroll:true}); }catch(e){} }, 40); }
+  };
+  const _dict=showDict;
+  showDict=function(){ lastF=document.activeElement; _dict();
+    const inner=modal()?.querySelector('.cmpin'); if(inner){ inner.tabIndex=-1;
+      setTimeout(()=>{ try{ inner.focus({preventScroll:true}); }catch(e){} }, 40); }
+  };
+  const _close=cmpClose;
+  cmpClose=function(){ _close();
+    if(lastF && lastF!==document.body && document.contains(lastF)){
+      try{ lastF.focus({preventScroll:true}); }catch(e){} }
+  };
+  document.addEventListener('keydown',e=>{
+    const m=modal(); if(m && m.classList.contains('on')) trapTab(e, m.querySelector('.cmpin')||m);
+    const ms=document.getElementById('mSheet');
+    if(ms && !ms.hidden) trapTab(e, ms.querySelector('.msbd')||ms);
+  });
 })();
 
 /* ── 툴팁 접근성: 텍스트 없는 지표 막대에 aria-label 부여 + 포커스 툴팁 ── */
