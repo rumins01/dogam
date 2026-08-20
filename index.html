@@ -1761,6 +1761,8 @@ footer{background:transparent!important;padding:0!important;margin:28px auto 0!i
   .qtext{font-size:0.96875rem!important}
 }
 
+.qtlede{margin:6px 0 14px;font-size:0.8125rem;color:var(--ink2);line-height:1.7;max-width:62ch}
+.qtlede b{color:var(--ink);font-weight:700}
 .qbd{font-size:0.625rem;font-weight:700;padding:2px 6px;border-radius:3px;white-space:nowrap;
   background:color-mix(in srgb,var(--pos) 14%,transparent);color:var(--pos)}
 .qsrc2.bd{background:color-mix(in srgb,var(--pos) 12%,transparent);color:var(--pos)}
@@ -2024,7 +2026,12 @@ footer{background:transparent!important;padding:0!important;margin:28px auto 0!i
         <h4>발언</h4>
         <dl>
           <dt>국정감사</dt><dd>국회회의록시스템 회의록 원문 파싱 · 8,892건 / 268명</dd>
-          <dt>언론 인용</dt><dd>기사 제목에 큰따옴표로 인용된 의원 발언 <span id="pressN">2,729</span>건 · 원문은 각 언론사 링크로 연결 · 기사 제목 인용이라 실제 발언과 다를 수 있어 '언론 인용'으로 구분 표시</dd>
+          <dt>언론 본문</dt><dd><b>기사 본문</b>의 큰따옴표 안 발언 <span id="pressN">6,777</span>건 · 네이버 검색 API로 각 의원 이름으로 찾은 최근 1년 기사의 본문을 읽어 뽑았어요(의원당 최대 40건)<br>
+            · <b>인용문에서 가장 가까운 이름</b>이 그 의원이고, 그 뒤가 주격일 때만 채택해요. 여러 정치인을 인용한 종합 기사에서 화자가 바뀌는 걸 막기 위해서예요<br>
+            · 같은 발언이 여러 매체에 실리면 하나로 합치고 매체 수를 표시해요<br>
+            · 서로 다른 의원에게 같은 문장이 붙으면 둘 중 하나는 틀린 거라, 가려지지 않으면 <b>양쪽 다 버려요</b><br>
+            · 동명이인 <b>박지원 의원 2분</b>은 이름만으로 화자를 가릴 수 없어 이 항목에서 제외했어요<br>
+            · 본문은 각 매체 저작물이라 저장하지 않고 인용문과 링크만 두었어요</dd>
           <dt>앞뒤 맥락</dt><dd>같은 회의록의 직전·직후 발언을 원문 순서대로 부착</dd>
         </dl>
       </section>
@@ -2088,9 +2095,9 @@ footer{background:transparent!important;padding:0!important;margin:28px auto 0!i
   // GitHub Pages가 JSON에 cache-control: max-age=600을 주므로, 버전이 없으면
   // 재방문자가 배포 직후 최대 10분간 어제 데이터를 본다(2026-08-20 실측).
   // 매일 09시에 갱신되는 사이트라 매일 같은 일이 생긴다.
-  var V='35cd7b9caeba';
+  var V='ad027d397387';
   var FILES=['dogam-a.json?v='+V,'dogam-b.json?v='+V];
-  var TOTAL_RAW=42445464;                 // 압축 해제 기준 총 바이트(진행률 분모)
+  var TOTAL_RAW=44006613;                 // 압축 해제 기준 총 바이트(진행률 분모)
   var bar=document.getElementById('bootBar'), txt=document.getElementById('bootTxt'),
       rb=document.getElementById('bootRetry');
   var got=[0,0];

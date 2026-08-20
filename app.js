@@ -2820,23 +2820,10 @@ const QT_SORTS = [
   ['long','발언 긴 순','문장이 긴 발언부터 · 맥락이 많이 담긴 순서'],
   ['news','관련 보도 많은 순','그 발언에 붙은 기사가 많은 순 · 화제가 된 발언']
 ];
-/* 본문 인용(payload.bodyq)을 발언 목록에 합친다.
-   헤드라인 조각보다 완결된 문장이라, 같은 의원에 본문 인용이 있으면 헤드라인 인용은 감춘다. */
-(function mergeBodyQuotes(){
-  const B = D.bodyq || {};
-  const cds = Object.keys(B).filter(cd => (B[cd]||[]).length);
-  if(!cds.length) return;
-  const has = new Set(cds);
-  const add = [];
-  cds.forEach(cd=>{
-    (B[cd]||[]).forEach(([sent, date, press, url, title])=>{
-      add.push({ c:cd, s:sent, t:[], kw:[], m:'언론', d:date||'', src:'언론',
-                 mu:url, ms:press||'언론', mt:title||'', body:1 });
-    });
-  });
-  // 본문 인용이 있는 의원은 헤드라인 인용을 제외
-  D.quotes = (D.quotes||[]).filter(q => !(q.src==='언론' && !q.body && has.has(q.c))).concat(add);
-})();
+/* ── 구 `bodyq` 병합 로직은 제거했다 (2026-08-20)
+   예전엔 언론 인용이 기사 제목에서 나왔고, 본문 인용은 하루 40명씩 커서로 돌리는
+   별도 실험이라 둘을 섞어야 했다. 이젠 언론 인용 전부가 본문에서 온다.
+   수집은 scripts/daily_refresh.js 의 refreshMediaQuotes(). ── */
 /* 태그 표시 순서 고정 — 분야(그룹) 순 → 그룹 내 정의 순 */
 var TAG_RANK = (function(){
   const r={}; let i=0;
@@ -3008,6 +2995,8 @@ qtRender=function(){
   w.innerHTML=`
     <div class="qthead">
       <h3>의원이 직접 한 말</h3>
+      <p class="qtlede">둘 다 <b>따옴표 안의 발언 원문</b>이에요.
+         국정감사는 회의록 속기록에서, 언론은 <b>기사 본문</b>에서 가져왔어요 — 제목이 아니라요.</p>
 
       <div class="frow"><span class="frl">정렬</span>
       <div class="sortbar" id="qtSortBar">
@@ -3020,7 +3009,7 @@ qtRender=function(){
       <div class="srcbar" id="srcbar">
         <button data-src="" aria-pressed="${!qtSrc}">전체 <em>${nf(srcCnt.__all||0)}</em></button>
         <button data-src="감사" aria-pressed="${qtSrc==='감사'}">국정감사 <em>${nf(srcCnt['감사']||0)}</em></button>
-        <button data-src="언론" aria-pressed="${qtSrc==='언론'}">언론 인용 <em>${nf(srcCnt['언론']||0)}</em></button>
+        <button data-src="언론" aria-pressed="${qtSrc==='언론'}">언론 본문 <em>${nf(srcCnt['언론']||0)}</em></button>
       </div></div>
       <div class="frow"><span class="frl">분야</span>
       <div class="grpbar" id="grpbar">
@@ -3047,7 +3036,7 @@ qtRender=function(){
             <button class="qwho" data-cd="${m.cd}">${avatar(m,'ph')}
               <span class="qn2">${esc(m.name)}</span>
               <span class="qp2" style="color:${pc(m.party)}">${esc(m.party)}</span></button>
-            <span class="qsrc2 ${q.src==='언론'?(q.body?'md bd':'md'):'gs'}">${q.src==='언론'?esc(q.ms||'언론'):esc(q.m)+'위 국정감사'}</span>${q.body?'<span class="qbd">본문 인용</span>':''}
+            <span class="qsrc2 ${q.src==='언론'?'md bd':'gs'}">${q.src==='언론'?esc(q.ms||'언론'):esc(q.m)+'위 국정감사'}</span>${(q.n>1)?`<span class="qbd" title="같은 발언을 ${q.n}개 매체가 실었어요">${q.n}개 매체</span>`:''}
             <time>${esc(q.d)}</time>
           </header>
           <button type="button" class="qtext${q.src==='언론'?' md':''}" data-qtoggle="${esc(key)}">
@@ -3736,7 +3725,8 @@ const DATA_DICT=[
  ['bills[1,656]','기명표결 의안. id=의안ID(PRC_…, likms 링크와 조인), name, dt, kind, res(결과), y/n/b(공식집계), cmt, tags'],
  ['vfull','의안ID → 299자 표결 문자열 (1=찬성 2=반대 3=기권 0=불참 -=기록없음), midx의 순서와 대응'],
  ['midx[299]','vfull 문자열의 자리 순서 = 의원 cd 배열'],
- ['quotes[11,621]','발언. c=의원cd, s=발언문, t=주제태그, kw=키워드, m=위원회, d=날짜, rid=회의록ID, x=[앞발언,뒤발언], src=감사|언론, 언론이면 ms=매체·mu=URL·mt=기사제목 · 국감 발언문은 의원당 최대 40건'],
+ ['quotes[16,613]','발언. c=의원cd, s=발언문, t=주제태그, kw=키워드, m=위원회, d=날짜, rid=회의록ID, x=[앞발언,뒤발언], nq=관련보도 인덱스, src=감사(8,892)|언론(7,721) · 둘 다 의원당 최대 40건'],
+ ['quotes[].src=언론','기사 본문의 따옴표 인용. ms=매체목, mu=원문URL, mt=기사제목, body=1, n=같은 발언을 실은 매체 수 · 화자 귀속은 인용문 앞뒤의 이름+주격조사 또는 인용 직후 60자 이내 이름으로만 판정'],
  ['sums','의안번호 → 제안이유·주요내용 요약 3줄'],
  ['assets','의원cd → 재산. t=총액(천원), p=종전, a=자산합, b=채무, c=[분류,금액], r=[관계,금액], i=신고내역(국회공보 원문), rk=순위 · 277명'],
  ['news5 / qnews / blog','의원cd → 5년 보도목록 / 발언 관련 보도 / 블로그 글 (제목·매체·날짜·링크만)'],
