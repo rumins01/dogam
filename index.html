@@ -1806,9 +1806,13 @@ footer{background:transparent!important;padding:0!important;margin:28px auto 0!i
 .qttot{background:color-mix(in srgb,var(--accent) 12%,transparent);color:var(--accent);
   border-radius:999px;padding:3px 11px;font-size:.75rem;font-weight:700}
 .qttot b{font-family:var(--mono);font-weight:800;margin-right:1px}
-/* 리드문 왼쪽, 통계 오른쪽 */
-.qtlederow{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
-.qthome .qtlede{margin:0;font-size:.78125rem;color:var(--ink2);line-height:1.6;flex:1 1 320px;min-width:0}
+.qthome .qtlede{margin:0;font-size:.78125rem;color:var(--ink2);line-height:1.6}
+/* 툴바 우측 메타 — 검색·필터와 같은 줄의 남는 공간에 */
+.qtmeta{display:flex;align-items:center;gap:7px;margin-left:auto;flex:0 0 auto}
+.qtmeta span{border-radius:999px;padding:4px 11px;font-size:.71875rem;font-weight:600;white-space:nowrap}
+.qtmeta b{font-family:var(--mono);font-weight:800;margin-left:2px}
+.qtmeta .s-nw{background:color-mix(in srgb,var(--pos) 12%,transparent);color:var(--pos)}
+.qtmeta .s-gen{background:var(--panel);border:1px solid var(--line);color:var(--ink3)}
 .qtstat{display:flex;gap:7px;flex-wrap:wrap;flex:0 0 auto}
 .qtstat span{border-radius:999px;padding:4px 11px;font-size:.71875rem;font-weight:600;
   border:1px solid transparent;white-space:nowrap}
@@ -1818,8 +1822,8 @@ footer{background:transparent!important;padding:0!important;margin:28px auto 0!i
 .qtstat .s-md{background:color-mix(in srgb,var(--neu) 16%,transparent);color:var(--neu)}
 .qtstat .s-nw{background:color-mix(in srgb,var(--pos) 12%,transparent);color:var(--pos)}
 @media(max-width:560px){
-  .qtlederow{align-items:flex-start}
-  .qtstat{width:100%}
+  .qtmeta{width:100%;margin-left:0;order:4}
+  .qtmeta span{flex:1 1 0;text-align:center}
 }
 @media(max-width:560px){
   .qtctl{width:100%;order:3}
@@ -1979,6 +1983,7 @@ footer{background:transparent!important;padding:0!important;margin:28px auto 0!i
 <div class="ctrl toolbar" id="toolbar">
   <input type="search" id="q" placeholder="의원 이름·지역구·위원회 검색" aria-label="의원 이름·지역구·위원회 검색 (초성 검색 가능)" autocomplete="off">
   <span class="qtctl" id="qtCtl" hidden></span>
+  <span class="qtmeta" id="qtMeta" hidden></span>
   <span class="sortwrap" id="sortWrap"></span>
   <button class="fbtn" id="fBtn" aria-expanded="false"><i class="fem">🎨</i>정당별로 보기</button>
   <div class="seg mini" id="dens" aria-label="보기 방식">
@@ -2139,7 +2144,7 @@ footer{background:transparent!important;padding:0!important;margin:28px auto 0!i
   // GitHub Pages가 JSON에 cache-control: max-age=600을 주므로, 버전이 없으면
   // 재방문자가 배포 직후 최대 10분간 어제 데이터를 본다(2026-08-20 실측).
   // 매일 09시에 갱신되는 사이트라 매일 같은 일이 생긴다.
-  var V='da5fc27938a9';
+  var V='58aee5b7006f';
   var FILES=['dogam-a.json?v='+V,'dogam-b.json?v='+V];
   var TOTAL_RAW=44088843;                 // 압축 해제 기준 총 바이트(진행률 분모)
   var bar=document.getElementById('bootBar'), txt=document.getElementById('bootTxt'),

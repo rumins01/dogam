@@ -1977,8 +1977,15 @@ render=function(){
   const isMember = viewMode==='card'||viewMode==='compact';
   const d=document.getElementById('dens'); if(d) d.style.display=isMember?'':'none';
   // 발언 전용 컨트롤(정렬·출처)은 발언 화면에서만 노출
-  (function(){ const ctl=document.getElementById('qtCtl');
-    if(ctl && viewMode!=='qt'){ ctl.hidden=true; ctl.innerHTML=''; } })();
+  (function(){ const ctl=document.getElementById('qtCtl'), mt=document.getElementById('qtMeta');
+    if(viewMode!=='qt'){
+      if(ctl){ ctl.hidden=true; ctl.innerHTML=''; }
+      if(mt){ mt.hidden=true; mt.innerHTML=''; }
+    }
+    // 발언 화면의 총건수는 출처 필터의 '전체'와 겹치므로 감춘다
+    const c=document.getElementById('count');
+    if(c) c.style.display = (viewMode==='qt') ? 'none' : '';
+  })();
   // 검색창은 현재 탭의 콘텐츠를 검색한다 (이전에는 어느 탭에서든 의원만 걸러졌다)
   (function(){
     const qi=document.getElementById('q'); if(!qi) return;
@@ -3099,14 +3106,7 @@ qtRender=function(){
           <h3>의원이 직접 한 말</h3>
           <span class="qttot"><b>${nf(Q.length)}</b>건</span>
         </div>
-        <div class="qtlederow">
-          <p class="qtlede">국정감사 회의록과 언론 기사 <b>본문</b>에서 가져온 <b>따옴표 안의 발언 원문</b>이에요.</p>
-          <div class="qtstat">
-            <span class="s-gs">국정감사 <b>${nf(Q.filter(z=>z.src==='감사').length)}</b></span>
-            <span class="s-md">언론 본문 <b>${nf(Q.filter(z=>z.src==='언론').length)}</b></span>
-            ${(()=>{ const ds=Q.map(z=>z.d).filter(Boolean).sort(); return ds.length? `<span class="s-nw">최신 <b>${esc(ds[ds.length-1])}</b></span>`:''; })()}
-          </div>
-        </div>
+        <p class="qtlede">국정감사 회의록과 언론 기사 <b>본문</b>에서 가져온 <b>따옴표 안의 발언 원문</b>이에요.</p>
       </div>
       <div class="frow"><span class="frl">분야</span>
       <div class="grpbar" id="grpbar">
@@ -3162,6 +3162,13 @@ qtRender=function(){
         <button data-src="감사" aria-pressed="${qtSrc==='감사'}">국정감사 <em>${nf(srcCnt['감사']||0)}</em></button>
         <button data-src="언론" aria-pressed="${qtSrc==='언론'}">언론 <em>${nf(srcCnt['언론']||0)}</em></button>
       </span>`;
+    const meta=document.getElementById('qtMeta');
+    if(meta){
+      const ds=Q.map(z=>z.d).filter(Boolean).sort();
+      meta.hidden=false;
+      meta.innerHTML = (ds.length? `<span class="s-nw">최신 <b>${esc(ds[ds.length-1])}</b></span>`:'')
+        + `<span class="s-gen">수집 <b>${esc(D.meta.gen||'')}</b></span>`;
+    }
   })();
   const qss=document.getElementById('qtSortSel');
   if(qss) qss.onchange=()=>{ qtSort=qss.value; qtShown=60; qtRender();
