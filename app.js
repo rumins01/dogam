@@ -3096,7 +3096,7 @@ qtRender=function(){
     <div class="qthead">
       <div class="qthome">
         <h3>의원이 직접 한 말</h3>
-        <p class="qtlede">국정감사 회의록과 언론 기사 <b>본문</b>에서 가져온 <b>따옴표 안의 발언 원문</b>이에요. 제목이 아니라요.</p>
+        <p class="qtlede">국정감사 회의록과 언론 기사 <b>본문</b>에서 가져온 <b>따옴표 안의 발언 원문</b>이에요.</p>
         <div class="qtstat">
           <span><b>${nf(Q.length)}</b>건</span>
           <span>국정감사 <b>${nf(Q.filter(z=>z.src==='감사').length)}</b></span>
