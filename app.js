@@ -3095,13 +3095,17 @@ qtRender=function(){
   w.innerHTML=`
     <div class="qthead">
       <div class="qthome">
-        <h3>의원이 직접 한 말</h3>
-        <p class="qtlede">국정감사 회의록과 언론 기사 <b>본문</b>에서 가져온 <b>따옴표 안의 발언 원문</b>이에요.</p>
-        <div class="qtstat">
-          <span><b>${nf(Q.length)}</b>건</span>
-          <span>국정감사 <b>${nf(Q.filter(z=>z.src==='감사').length)}</b></span>
-          <span>언론 본문 <b>${nf(Q.filter(z=>z.src==='언론').length)}</b></span>
-          ${(()=>{ const ds=Q.map(z=>z.d).filter(Boolean).sort(); return ds.length? `<span>최신 <b>${esc(ds[ds.length-1])}</b></span>`:''; })()}
+        <div class="qthd">
+          <h3>의원이 직접 한 말</h3>
+          <span class="qttot"><b>${nf(Q.length)}</b>건</span>
+        </div>
+        <div class="qtlederow">
+          <p class="qtlede">국정감사 회의록과 언론 기사 <b>본문</b>에서 가져온 <b>따옴표 안의 발언 원문</b>이에요.</p>
+          <div class="qtstat">
+            <span class="s-gs">국정감사 <b>${nf(Q.filter(z=>z.src==='감사').length)}</b></span>
+            <span class="s-md">언론 본문 <b>${nf(Q.filter(z=>z.src==='언론').length)}</b></span>
+            ${(()=>{ const ds=Q.map(z=>z.d).filter(Boolean).sort(); return ds.length? `<span class="s-nw">최신 <b>${esc(ds[ds.length-1])}</b></span>`:''; })()}
+          </div>
         </div>
       </div>
       <div class="frow"><span class="frl">분야</span>
