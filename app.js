@@ -1976,6 +1976,9 @@ render=function(){
   _render0();
   const isMember = viewMode==='card'||viewMode==='compact';
   const d=document.getElementById('dens'); if(d) d.style.display=isMember?'':'none';
+  // 발언 전용 컨트롤(정렬·출처)은 발언 화면에서만 노출
+  (function(){ const ctl=document.getElementById('qtCtl');
+    if(ctl && viewMode!=='qt'){ ctl.hidden=true; ctl.innerHTML=''; } })();
   // 검색창은 현재 탭의 콘텐츠를 검색한다 (이전에는 어느 탭에서든 의원만 걸러졌다)
   (function(){
     const qi=document.getElementById('q'); if(!qi) return;
@@ -3091,23 +3094,16 @@ qtRender=function(){
     return out; };
   w.innerHTML=`
     <div class="qthead">
-      <h3>의원이 직접 한 말</h3>
-      <p class="qtlede">둘 다 <b>따옴표 안의 발언 원문</b>이에요.
-         국정감사는 회의록 속기록에서, 언론은 <b>기사 본문</b>에서 가져왔어요 — 제목이 아니라요.</p>
-
-      <div class="frow"><span class="frl">정렬</span>
-      <div class="sortbar" id="qtSortBar">
-        <select id="qtSortSel" aria-label="발언 정렬 기준">
-          ${QT_SORTS.map(o=>`<option value="${o[0]}"${qtSort===o[0]?' selected':''}>${esc(o[1])}</option>`).join('')}
-        </select>
-        <span class="sorthint">${esc((QT_SORTS.find(o=>o[0]===qtSort)||QT_SORTS[0])[2])}</span>
-      </div></div>
-      <div class="frow"><span class="frl">출처</span>
-      <div class="srcbar" id="srcbar">
-        <button data-src="" aria-pressed="${!qtSrc}">전체 <em>${nf(srcCnt.__all||0)}</em></button>
-        <button data-src="감사" aria-pressed="${qtSrc==='감사'}">국정감사 <em>${nf(srcCnt['감사']||0)}</em></button>
-        <button data-src="언론" aria-pressed="${qtSrc==='언론'}">언론 본문 <em>${nf(srcCnt['언론']||0)}</em></button>
-      </div></div>
+      <div class="qthome">
+        <h3>의원이 직접 한 말</h3>
+        <p class="qtlede">국정감사 회의록과 언론 기사 <b>본문</b>에서 가져온 <b>따옴표 안의 발언 원문</b>이에요. 제목이 아니라요.</p>
+        <div class="qtstat">
+          <span><b>${nf(Q.length)}</b>건</span>
+          <span>국정감사 <b>${nf(Q.filter(z=>z.src==='감사').length)}</b></span>
+          <span>언론 본문 <b>${nf(Q.filter(z=>z.src==='언론').length)}</b></span>
+          ${(()=>{ const ds=Q.map(z=>z.d).filter(Boolean).sort(); return ds.length? `<span>최신 <b>${esc(ds[ds.length-1])}</b></span>`:''; })()}
+        </div>
+      </div>
       <div class="frow"><span class="frl">분야</span>
       <div class="grpbar" id="grpbar">
         <button data-g="" aria-pressed="${!qtGrp}">전체 <em>${nf(grpCnt.__all||0)}</em></button>
@@ -3149,6 +3145,20 @@ qtRender=function(){
     </div>
     ${list.length>qtShown?`<button class="qtmore" id="qtMore">${nf(list.length-qtShown)}건 더 보기</button>`:''}`;
   // 탭 내부 검색창은 상단 통합 검색으로 일원화했다(중복 제거)
+  /* 검색창과 같은 줄에 정렬·출처를 놓는다 (홈 상단을 한 줄로) */
+  (function(){
+    const ctl=document.getElementById('qtCtl'); if(!ctl) return;
+    ctl.hidden=false;
+    ctl.innerHTML=`
+      <select id="qtSortSel" aria-label="발언 정렬 기준" title="정렬 기준">
+        ${QT_SORTS.map(o=>`<option value="${o[0]}"${qtSort===o[0]?' selected':''}>${esc(o[1])}</option>`).join('')}
+      </select>
+      <span class="srcseg" id="srcbar" role="group" aria-label="발언 출처">
+        <button data-src="" aria-pressed="${!qtSrc}">전체 <em>${nf(srcCnt.__all||0)}</em></button>
+        <button data-src="감사" aria-pressed="${qtSrc==='감사'}">국정감사 <em>${nf(srcCnt['감사']||0)}</em></button>
+        <button data-src="언론" aria-pressed="${qtSrc==='언론'}">언론 <em>${nf(srcCnt['언론']||0)}</em></button>
+      </span>`;
+  })();
   const qss=document.getElementById('qtSortSel');
   if(qss) qss.onchange=()=>{ qtSort=qss.value; qtShown=60; qtRender();
     const w2=document.getElementById('qtwrap'); if(w2) w2.scrollIntoView({block:'start',behavior:'smooth'}); };
