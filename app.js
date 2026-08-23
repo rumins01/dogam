@@ -3166,8 +3166,7 @@ qtRender=function(){
     if(meta){
       const ds=Q.map(z=>z.d).filter(Boolean).sort();
       meta.hidden=false;
-      meta.innerHTML = (ds.length? `<span class="s-nw">최신 <b>${esc(ds[ds.length-1])}</b></span>`:'')
-        + `<span class="s-gen">수집 <b>${esc(D.meta.gen||'')}</b></span>`;
+      meta.innerHTML = ds.length? `<span class="s-nw">최신 <b>${esc(ds[ds.length-1])}</b></span>` : '';
     }
   })();
   const qss=document.getElementById('qtSortSel');
