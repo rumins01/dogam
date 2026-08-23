@@ -107,7 +107,7 @@ function choStr(s){ let o='';
     o += (c>=0xAC00&&c<=0xD7A3)? CHO[Math.floor((c-0xAC00)/588)] : ch; }
   return o; }
 const JAMO_RE=/^[ㄱ-ㅎ]+$/;
-let viewMode='card';
+let viewMode='qt';   // 홈 = 발언 화면
 document.getElementById('view').addEventListener('click',e=>{
   const b=e.target.closest('button'); if(!b) return;
   viewMode=b.dataset.v;
@@ -3427,7 +3427,7 @@ const TAB_SLUG  = {p:'프로필', b:'의정활동', s:'발언', w:'재산', n:'�
 const SLUG_TAB  = Object.fromEntries(Object.entries(TAB_SLUG).map(([k,v])=>[v,k]));
 
 function currentRoute(){
-  const seg=['', VIEW_SLUG[viewMode]||'의원'];
+  const seg=['', VIEW_SLUG[viewMode]||'발언'];
   if(viewMode==='qt' && typeof qtCtx!=='undefined' && qtCtx){
     seg.push('맥락', encodeURIComponent(qtCtx));
   }
@@ -3464,8 +3464,8 @@ function applyRoute(){
     const qs2=qi2>=0? h0.slice(qi2+1) : '';
     const raw=decodeURIComponent(qi2>=0? h0.slice(0,qi2) : h0);
     const p=raw? raw.split('/').map(x=>decodeURIComponent(x)) : [];
-    try{ applyRouteQuery(new URLSearchParams(qs2), SLUG_VIEW[p[0]]||'card'); }catch(e){}
-    const v=SLUG_VIEW[p[0]] || 'card';
+    try{ applyRouteQuery(new URLSearchParams(qs2), SLUG_VIEW[p[0]]||'qt'); }catch(e){}
+    const v=SLUG_VIEW[p[0]] || 'qt';
 
     // 의원 상세 열기 여부
     const mi=p.indexOf('의원', 1);
@@ -3559,7 +3559,7 @@ addEventListener('resize', shOffset);
     q.value=''; activeParty=null;
     if(typeof sidoSel!=='undefined' && sidoSel) sidoSel.value='';
     [...document.querySelectorAll('#parties .chip')].forEach(c=>c.setAttribute('aria-pressed','false'));
-    try{ history.pushState({},'','#/의원'); }catch(e){ location.hash='#/의원'; }
+    try{ history.pushState({},'','#/발언'); }catch(e){ location.hash='#/발언'; }
     applyRoute();
     scrollTo(0,0);
   };
@@ -4257,7 +4257,7 @@ function a11yTips(){
   /* 화면 이동 — pushState 라우팅이라 hashchange만으론 못 잡아 pushRoute를 감싼다 */
   var lastH='';
   var emitRoute=function(){
-    var h=location.hash||'#/의원';
+    var h=location.hash||'#/발언';
     if(h===lastH) return; lastH=h;
     sdSeen={};
     var p=[]; try{ p=decodeURIComponent(h.replace(/^#\/?/,'')).split('/').filter(Boolean); }catch(e){}

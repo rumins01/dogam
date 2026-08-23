@@ -1922,10 +1922,10 @@ footer{background:transparent!important;padding:0!important;margin:28px auto 0!i
 <!-- 1단: 최상위 내비게이션 (어디를 볼지) -->
 <nav class="navbar" aria-label="화면 선택">
   <div class="seg" id="view" role="tablist">
-    <button data-v="card" aria-pressed="true"><svg class="ic" aria-hidden="true"><use href="#i-person"/></svg><span>의원</span></button>
+    <button data-v="qt" aria-pressed="true"><svg class="ic" aria-hidden="true"><use href="#i-quote"/></svg><span>발언</span></button>
+    <button data-v="card" aria-pressed="false"><svg class="ic" aria-hidden="true"><use href="#i-person"/></svg><span>의원</span></button>
     <button data-v="map" aria-pressed="false"><svg class="ic" aria-hidden="true"><use href="#i-map"/></svg><span>지역구</span></button>
     <button data-v="sess" aria-pressed="false"><svg class="ic" aria-hidden="true"><use href="#i-bill"/></svg><span>법안</span></button>
-    <button data-v="qt" aria-pressed="false"><svg class="ic" aria-hidden="true"><use href="#i-quote"/></svg><span>발언</span></button>
     <button data-v="quiz" aria-pressed="false"><svg class="ic" aria-hidden="true"><use href="#i-target"/></svg><span>매칭</span></button>
     <button data-v="my" aria-pressed="false"><svg class="ic" aria-hidden="true"><use href="#i-star"/></svg><span>내 의원</span></button>
   </div>
@@ -2095,7 +2095,7 @@ footer{background:transparent!important;padding:0!important;margin:28px auto 0!i
   // GitHub Pages가 JSON에 cache-control: max-age=600을 주므로, 버전이 없으면
   // 재방문자가 배포 직후 최대 10분간 어제 데이터를 본다(2026-08-20 실측).
   // 매일 09시에 갱신되는 사이트라 매일 같은 일이 생긴다.
-  var V='5eeba82cb2af';
+  var V='299aad1fe170';
   var FILES=['dogam-a.json?v='+V,'dogam-b.json?v='+V];
   var TOTAL_RAW=44088843;                 // 압축 해제 기준 총 바이트(진행률 분모)
   var bar=document.getElementById('bootBar'), txt=document.getElementById('bootTxt'),
