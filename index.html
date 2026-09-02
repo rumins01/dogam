@@ -1893,8 +1893,7 @@ footer{background:transparent!important;padding:0!important;margin:28px auto 0!i
 #cmpModal .cmx .pri2{background:var(--accent);color:#fff;border-color:var(--accent)}
 /* 간단히 보기 순위 잘림 방지 */
 .grid.compact .arank{white-space:nowrap}
-
-/* ── 모바일 지역구: 화면 점유 축소 (2026-08-23) ──
+/* ── 모바일 지역구: 화면 점유 축소 (2026-09-02) ──
    .mapside가 520px 고정이라 빈 안내 패널(296px)까지 더해져
    지도 아래로 1,000px 넘게 밀렸다. 세로 공간을 실제 내용만큼만 쓰게 한다. */
 @media (max-width:900px){
@@ -2164,7 +2163,7 @@ footer{background:transparent!important;padding:0!important;margin:28px auto 0!i
   // GitHub Pages가 JSON에 cache-control: max-age=600을 주므로, 버전이 없으면
   // 재방문자가 배포 직후 최대 10분간 어제 데이터를 본다(2026-08-20 실측).
   // 매일 09시에 갱신되는 사이트라 매일 같은 일이 생긴다.
-  var V='eff510c764db';
+  var V='750c43aac2f3';
   var FILES=['dogam-a.json?v='+V,'dogam-b.json?v='+V];
   var TOTAL_RAW=44481053;                 // 압축 해제 기준 총 바이트(진행률 분모)
   var bar=document.getElementById('bootBar'), txt=document.getElementById('bootTxt'),
