@@ -1893,6 +1893,26 @@ footer{background:transparent!important;padding:0!important;margin:28px auto 0!i
 #cmpModal .cmx .pri2{background:var(--accent);color:#fff;border-color:var(--accent)}
 /* 간단히 보기 순위 잘림 방지 */
 .grid.compact .arank{white-space:nowrap}
+
+/* ── 모바일 지역구: 화면 점유 축소 (2026-08-23) ──
+   .mapside가 520px 고정이라 빈 안내 패널(296px)까지 더해져
+   지도 아래로 1,000px 넘게 밀렸다. 세로 공간을 실제 내용만큼만 쓰게 한다. */
+@media (max-width:900px){
+  .mapside{height:auto!important;min-height:0!important}
+  .mapinfo{min-height:0!important}
+}
+@media (max-width:640px){
+  .mapbox{height:min(50vh,400px)!important;min-height:250px}
+  .mapinfo{padding:14px!important;gap:9px}
+  .mapinfo .ph0{padding:6px 0;font-size:.78125rem}
+  .legend{padding:11px 12px;display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center}
+  .legend h5{width:100%;margin:0 0 2px}
+  .legend .lg{padding:3px 9px;border:1px solid var(--line);border-radius:999px;font-size:.6875rem;gap:6px}
+  .legend .lg em{margin-left:4px}
+  .propbar{padding:11px 12px;min-height:0;max-height:128px}
+  .propbar h5{margin-bottom:7px}
+  .mapsel{margin-bottom:8px}
+}
 </style>
 </head>
 <body>

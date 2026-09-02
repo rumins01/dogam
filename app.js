@@ -3103,7 +3103,7 @@ qtRender=function(){
     <div class="qthead">
       <div class="qthome">
         <div class="qthd">
-          <h3>의원이 직접 한 말</h3>
+          <h3>말말말</h3>
           <span class="qttot"><b>${nf(Q.length)}</b>건</span>
         </div>
         <p class="qtlede">국정감사 회의록과 언론 기사 <b>본문</b>에서 가져온 <b>따옴표 안의 발언 원문</b>이에요.</p>
