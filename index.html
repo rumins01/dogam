@@ -1912,6 +1912,22 @@ footer{background:transparent!important;padding:0!important;margin:28px auto 0!i
   .propbar h5{margin-bottom:7px}
   .mapsel{margin-bottom:8px}
 }
+/* ── 모바일 시도 바로가기: 지도 가림 해소 (2026-09-02) ──
+   버튼이 18개라 좁은 폭에서 4줄로 접히며 지도 상단 절반을 덮었다.
+   한 줄 가로 스크롤 띠로 바꿔 덮는 면적을 40px 안쪽으로 제한한다. */
+@media (max-width:640px){
+  .mapjump{
+    left:8px; right:8px; top:8px; max-width:none;
+    flex-wrap:nowrap; overflow-x:auto; overscroll-behavior-x:contain;
+    touch-action:pan-x; -webkit-overflow-scrolling:touch;
+    gap:4px; padding:4px;
+    background:color-mix(in srgb,var(--panel) 90%,transparent);
+    border-radius:999px; box-shadow:var(--sh);
+    scrollbar-width:none;
+  }
+  .mapjump::-webkit-scrollbar{ display:none }
+  .mapjump button{ flex:0 0 auto; height:32px; padding:0 11px; font-size:.71875rem }
+}
 </style>
 </head>
 <body>
